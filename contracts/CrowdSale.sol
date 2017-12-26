@@ -8,6 +8,7 @@ contract Crowdsale {
     address public beneficiary;
     uint public fundingGoal;
     uint public amountRaised;
+    uint public startTime;
     uint public deadline;
     uint public price;
     token public tokenReward;
@@ -27,13 +28,15 @@ contract Crowdsale {
     function Crowdsale(
         address ifSuccessfulSendTo,
         uint fundingGoalInEthers,
+        uint startTimeInSeconds,
         uint durationInMinutes,
         uint szaboCostOfEachToken,
         address addressOfTokenUsedAsReward
     ) public {
         beneficiary = ifSuccessfulSendTo;
         fundingGoal = fundingGoalInEthers * 1 ether;
-        deadline = now + durationInMinutes * 1 minutes;
+        startTime = startTimeInSeconds;
+        deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
         price = szaboCostOfEachToken * 1 finney;
         tokenReward = token(addressOfTokenUsedAsReward);
     }
@@ -46,6 +49,7 @@ contract Crowdsale {
     function()
     payable
     isOpen
+    afterStart
     //previousDeadline
     public {
         uint amount = msg.value;
@@ -54,6 +58,11 @@ contract Crowdsale {
         tokenReward.transferFrom(beneficiary, msg.sender, (amount * price) / 1 ether);
         checkGoalReached();
         FundTransfer(msg.sender, amount, true);
+    }
+
+    modifier afterStart() {
+        require(now >= startTime);
+        _;
     }
 
     modifier afterDeadline() {
