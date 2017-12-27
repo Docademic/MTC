@@ -13,6 +13,7 @@ contract MultiSigWallet {
     event OwnerAddition(address indexed owner);
     event OwnerRemoval(address indexed owner);
     event RequirementChange(uint required);
+    event EthDailyLimitChange(uint limit);
     /*
      *  Constants
      */
@@ -76,6 +77,10 @@ contract MultiSigWallet {
         && _required <= ownerCount
         && _required != 0
         && ownerCount != 0);
+        _;
+    }
+    modifier validDailyEthLimit(uint _limit) {
+        require (_limit >= 0);
         _;
     }
     /// @dev Fallback function allows to deposit ether.
@@ -169,6 +174,18 @@ contract MultiSigWallet {
         required = _required;
         RequirementChange(_required);
     }
+
+    /// @dev Allows to change the eth daily limit. Transaction has to be sent by wallet.
+    /// @param _ Number of required confirmations.
+    function changeEthDailyLimit(uint _limit)
+    public
+    onlyWallet
+    validDailyEthLimit(_limit)
+    {
+        ethDailyLimit = _limit;
+        EthDailyLimitChange(_limit);
+    }
+
     /// @dev Allows an owner to submit and confirm a transaction.
     /// @param destination Transaction target address.
     /// @param value Transaction ether value.
