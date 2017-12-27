@@ -176,7 +176,7 @@ contract MultiSigWallet {
     }
 
     /// @dev Allows to change the eth daily limit. Transaction has to be sent by wallet.
-    /// @param _ Number of required confirmations.
+    /// @param _limit Daily eth limit.
     function changeEthDailyLimit(uint _limit)
     public
     onlyWallet
