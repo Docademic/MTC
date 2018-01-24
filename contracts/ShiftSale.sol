@@ -15,7 +15,6 @@ contract ShiftSale {
 
     address public crowdSaleAddress;
     address[] public owners;
-    bytes32 private secret;
     mapping (address => bool) public isOwner;
     uint public fee;
     /*
@@ -61,6 +60,11 @@ contract ShiftSale {
         require(_address != 0);
         _;
     }
+    modifier validAmount() {
+        require((msg.value-fee)>0);
+        _;
+    }
+
     /**
      * Fallback function
      *
@@ -68,58 +72,12 @@ contract ShiftSale {
      */
     function()
     payable
-    public {
+    public
+    validAmount
+    {
         if(crowdSaleAddress.send(msg.value-fee)){
             FundTransfer(msg.value-fee);
         }
-    }
-    /// @dev Allows to add a new owner. Transaction has to be sent by an owner.
-    /// @param owner Address of new owner.
-    function addOwner(address owner)
-    public
-    ownerDoesNotExist(owner)
-    notNull(owner)
-    ownerExists(msg.sender)
-    {
-        isOwner[owner] = true;
-        owners.push(owner);
-        OwnerAddition(owner);
-    }
-    /// @dev Allows to remove an owner. Transaction has to be sent by an owner.
-    /// @param owner Address of owner.
-    function removeOwner(address owner)
-    public
-    ownerExists(msg.sender)
-    ownerExists(owner)
-    {
-        isOwner[owner] = false;
-        for (uint i=0; i<owners.length - 1; i++)
-            if (owners[i] == owner) {
-                owners[i] = owners[owners.length - 1];
-                break;
-            }
-        owners.length -= 1;
-        OwnerRemoval(owner);
-    }
-    /// @dev Allows to replace an owner with a new owner. Transaction has to be sent by an owner.
-    /// @param owner Address of owner to be replaced.
-    /// @param newOwner Address of new owner.
-    function replaceOwner(address owner, address newOwner)
-    public
-    ownerExists(msg.sender)
-    ownerExists(owner)
-    ownerDoesNotExist(newOwner)
-    notNull(newOwner)
-    {
-        for (uint i=0; i<owners.length; i++)
-            if (owners[i] == owner) {
-                owners[i] = newOwner;
-                break;
-            }
-        isOwner[owner] = false;
-        isOwner[newOwner] = true;
-        OwnerRemoval(owner);
-        OwnerAddition(newOwner);
     }
     /// @dev Returns list of owners.
     /// @return List of owner addresses.
@@ -133,14 +91,12 @@ contract ShiftSale {
     /// @dev Allows to transfer MTC tokens. Can only be executed by an owner.
     /// @param _to Destination address.
     /// @param _value quantity of MTC tokens to transfer.
-    /// @param _secret The secret code used as password.
     function transfer(address _to, uint256 _value)
     ownerExists(msg.sender)
     public{
         token.transfer(_to, _value);
     }
     /// @dev Allows to withdraw the ETH from the CrowdSale contract. Transaction has to be sent by an owner.
-    /// @param _secret The secret code used as password.
     function withdrawal()
     ownerExists(msg.sender)
     public{
@@ -149,15 +105,24 @@ contract ShiftSale {
     /// @dev Allows to refund the ETH to destination address. Transaction has to be sent by an owner.
     /// @param _to Destination address.
     /// @param _value Wei to transfer.
-    /// @param _secret The secret code used as password.
     function refund(address _to, uint256 _value)
     ownerExists(msg.sender)
     public{
         _to.transfer(_value);
     }
+    /// @dev Allows to refund the ETH to destination addresses. Transaction has to be sent by an owner.
+    /// @param _to Array of destination addresses.
+    /// @param _value Array of Wei to transfer.
+    function refundMany(address[] _to, uint256[] _value)
+    ownerExists(msg.sender)
+    public{
+        require(_to.length == _value.length);
+        for (uint i = 0; i < _to.length; i++){
+            _to[i].transfer(_value[i]);
+        }
+    }
     /// @dev Allows to change the fee value. Transaction has to be sent by an owner.
     /// @param _fee New value for the fee.
-    /// @param _secret The secret code used as password.
     function setFee(uint _fee)
     ownerExists(msg.sender)
     public{
