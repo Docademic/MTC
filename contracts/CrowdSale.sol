@@ -50,7 +50,6 @@ contract Crowdsale {
     payable
     isOpen
     afterStart
-    //previousDeadline
     public {
         uint amount = msg.value;
         balanceOf[msg.sender] += amount;
@@ -106,7 +105,6 @@ contract Crowdsale {
      *
      */
     function closeCrowdsale()
-    afterDeadline
     isOwner
     public {
         crowdsaleClosed = true;
