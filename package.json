@@ -1,0 +1,25 @@
+{
+  "name": "mtc",
+  "version": "1.0.0",
+  "description": "### The following code represents the contracts to be deployed on ethereum network for the ICO of the MTC Token.",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Docademic/MTC.git"
+  },
+  "author": "Docademic",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Docademic/MTC/issues"
+  },
+  "homepage": "https://github.com/Docademic/MTC#readme",
+  "dependencies": {
+    "web3": "^1.0.0-beta.29"
+  }
+}
