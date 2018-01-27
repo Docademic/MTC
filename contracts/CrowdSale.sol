@@ -12,6 +12,7 @@ contract Crowdsale {
     uint public deadline;
     uint public price;
     token public tokenReward;
+    bool public received;
     mapping(address => uint256) public balanceOf;
     bool fundingGoalReached = false;
     bool public crowdsaleClosed = false ;
@@ -57,6 +58,16 @@ contract Crowdsale {
         tokenReward.transferFrom(beneficiary, msg.sender, (amount * price) / 1 ether);
         checkGoalReached();
         FundTransfer(msg.sender, amount, true);
+    }
+
+    function shiftSalePurchase() payable public returns(bool success) {
+        uint amount = msg.value;
+        balanceOf[msg.sender] += amount;
+        amountRaised += amount;
+        tokenReward.transferFrom(beneficiary, msg.sender, (amount * price) / 1 ether);
+        checkGoalReached();
+        FundTransfer(msg.sender, amount, true);
+        return true;
     }
 
     modifier afterStart() {

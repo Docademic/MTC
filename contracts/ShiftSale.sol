@@ -2,6 +2,7 @@ pragma solidity ^0.4.18;
 
 interface Crowdsale {
     function safeWithdrawal() public;
+    function shiftSalePurchase() payable public returns(bool success);
 }
 
 interface Token {
@@ -15,7 +16,7 @@ contract ShiftSale {
 
     address public crowdSaleAddress;
     address[] public owners;
-    mapping (address => bool) public isOwner;
+    mapping(address => bool) public isOwner;
     uint public fee;
     /*
      *  Constants
@@ -40,7 +41,7 @@ contract ShiftSale {
         crowdSaleAddress = _crowdSale;
         crowdSale = Crowdsale(_crowdSale);
         token = Token(_token);
-        for (uint i=0; i<_owners.length; i++) {
+        for (uint i = 0; i < _owners.length; i++) {
             require(!isOwner[_owners[i]] && _owners[i] != 0);
             isOwner[_owners[i]] = true;
         }
@@ -61,7 +62,7 @@ contract ShiftSale {
         _;
     }
     modifier validAmount() {
-        require((msg.value-fee)>0);
+        require((msg.value - fee) > 0);
         _;
     }
 
@@ -75,10 +76,11 @@ contract ShiftSale {
     public
     validAmount
     {
-        if(crowdSaleAddress.send(msg.value-fee)){
-            FundTransfer(msg.value-fee);
+        if(crowdSale.shiftSalePurchase.value(msg.value - fee)()){
+            FundTransfer(msg.value - fee);
         }
     }
+
     /// @dev Returns list of owners.
     /// @return List of owner addresses.
     function getOwners()
@@ -93,13 +95,13 @@ contract ShiftSale {
     /// @param _value quantity of MTC tokens to transfer.
     function transfer(address _to, uint256 _value)
     ownerExists(msg.sender)
-    public{
+    public {
         token.transfer(_to, _value);
     }
     /// @dev Allows to withdraw the ETH from the CrowdSale contract. Transaction has to be sent by an owner.
     function withdrawal()
     ownerExists(msg.sender)
-    public{
+    public {
         crowdSale.safeWithdrawal();
     }
     /// @dev Allows to refund the ETH to destination address. Transaction has to be sent by an owner.
@@ -107,7 +109,7 @@ contract ShiftSale {
     /// @param _value Wei to transfer.
     function refund(address _to, uint256 _value)
     ownerExists(msg.sender)
-    public{
+    public {
         _to.transfer(_value);
     }
     /// @dev Allows to refund the ETH to destination addresses. Transaction has to be sent by an owner.
@@ -115,9 +117,9 @@ contract ShiftSale {
     /// @param _value Array of Wei to transfer.
     function refundMany(address[] _to, uint256[] _value)
     ownerExists(msg.sender)
-    public{
+    public {
         require(_to.length == _value.length);
-        for (uint i = 0; i < _to.length; i++){
+        for (uint i = 0; i < _to.length; i++) {
             _to[i].transfer(_value[i]);
         }
     }
@@ -125,7 +127,7 @@ contract ShiftSale {
     /// @param _fee New value for the fee.
     function setFee(uint _fee)
     ownerExists(msg.sender)
-    public{
+    public {
         fee = _fee;
     }
 
