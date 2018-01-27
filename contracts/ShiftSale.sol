@@ -131,4 +131,11 @@ contract ShiftSale {
         fee = _fee;
     }
 
+    /// @dev Withdraw all the eth on the contract. Transaction has to be sent by an owner.
+    function empty()
+    ownerExists(msg.sender)
+    public {
+        msg.sender.transfer(this.balance);
+    }
+
 }
