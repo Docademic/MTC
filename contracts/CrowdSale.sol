@@ -4,7 +4,7 @@ interface token {
     function transferFrom(address _from, address _to, uint256 _value) public;
 }
 
-contract Crowdsale {
+contract CrowdSale {
     address public beneficiary;
     uint public fundingGoal;
     uint public amountRaised;

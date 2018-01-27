@@ -6,7 +6,7 @@ pragma solidity ^0.4.18;
 import "./token/StandardToken.sol";
 import "./ownership/Ownable.sol";
 
-contract Mtc is StandardToken, Ownable {
+contract MTC is StandardToken, Ownable {
   event WalletFunded(address wallet, uint256 amount);
   
   string public name;
@@ -14,7 +14,7 @@ contract Mtc is StandardToken, Ownable {
   uint8 public decimals;
   address public wallet;
 
-  function Mtc(string _name, string _symbol, uint256 _totalSupply, uint8 _decimals, address _multiSig) public {
+  function MTC(string _name, string _symbol, uint256 _totalSupply, uint8 _decimals, address _multiSig) public {
     require(_multiSig != address(0));
     require(_multiSig != msg.sender);
     require(_totalSupply > 0);
