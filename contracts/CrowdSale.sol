@@ -43,6 +43,19 @@ contract Crowdsale {
     }
 
     /**
+     * Do purchase process
+     *
+     */
+    function purchase() internal {
+        uint amount = msg.value;
+        balanceOf[msg.sender] += amount;
+        amountRaised += amount;
+        tokenReward.transferFrom(beneficiary, msg.sender, (amount * price) / 1 ether);
+        checkGoalReached();
+        FundTransfer(msg.sender, amount, true);
+    }
+
+    /**
      * Fallback function
      *
      * The function without name is the default function that is called whenever anyone sends funds to a contract
@@ -52,21 +65,15 @@ contract Crowdsale {
     isOpen
     afterStart
     public {
-        uint amount = msg.value;
-        balanceOf[msg.sender] += amount;
-        amountRaised += amount;
-        tokenReward.transferFrom(beneficiary, msg.sender, (amount * price) / 1 ether);
-        checkGoalReached();
-        FundTransfer(msg.sender, amount, true);
+        purchase();
     }
 
+    /**
+     * The function called only from shiftsale
+     *
+     */
     function shiftSalePurchase() payable public returns(bool success) {
-        uint amount = msg.value;
-        balanceOf[msg.sender] += amount;
-        amountRaised += amount;
-        tokenReward.transferFrom(beneficiary, msg.sender, (amount * price) / 1 ether);
-        checkGoalReached();
-        FundTransfer(msg.sender, amount, true);
+        purchase();
         return true;
     }
 
