@@ -12,7 +12,6 @@ contract CrowdSale {
     uint public deadline;
     uint public price;
     token public tokenReward;
-    bool public received;
     mapping(address => uint256) public balanceOf;
     bool fundingGoalReached = false;
     bool public crowdsaleClosed = false ;
