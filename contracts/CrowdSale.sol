@@ -26,7 +26,7 @@ contract CrowdSale {
      *
      * Setup the owner
      */
-    function Crowdsale(
+    function CrowdSale(
         address ifSuccessfulSendTo,
         uint fundingGoalInEthers,
         uint startTimeInSeconds,
