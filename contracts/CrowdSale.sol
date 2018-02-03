@@ -32,7 +32,7 @@ contract CrowdSale {
         uint fundingGoalInEthers,
         uint startTimeInSeconds,
         uint durationInMinutes,
-        uint ethCostOfEachToken,
+        uint tokensPerEth,
         uint bonusEachToken,
         uint decimalsDifftoEth,
         address addressOfTokenUsedAsReward
@@ -41,7 +41,7 @@ contract CrowdSale {
         fundingGoal = fundingGoalInEthers * 1 ether;
         startTime = startTimeInSeconds;
         deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
-        price = ethCostOfEachToken * 1 ether;
+        price = tokensPerEth * 1 ether;
         bonus = bonusEachToken;
         tokenReward = token(addressOfTokenUsedAsReward);
         decDiff = decimalsDifftoEth;
@@ -55,7 +55,7 @@ contract CrowdSale {
         uint amount = msg.value;
         balanceOf[msg.sender] += amount;
         amountRaised += amount;
-        uint tokens = ((amount * price) + ((amount * price * bonus) / 100)) / 10**decDiff;
+        uint tokens =(((amount * price) + ((amount * price * bonus) / 100)) / 10**decDiff) / 1 ether;
         tokenReward.transferFrom(beneficiary, msg.sender, tokens);
         checkGoalReached();
         FundTransfer(msg.sender, amount, true);
