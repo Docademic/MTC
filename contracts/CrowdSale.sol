@@ -53,9 +53,10 @@ contract CrowdSale {
      */
     function purchase() internal {
         uint amount = msg.value;
+        uint vp = amount * price;
+        uint tokens = ((vp + ((vp * bonus) / 100)) / 10**decDiff) / 1 ether;
         balanceOf[msg.sender] += amount;
         amountRaised += amount;
-        uint tokens =(((amount * price) + ((amount * price * bonus) / 100)) / 10**decDiff) / 1 ether;
         tokenReward.transferFrom(beneficiary, msg.sender, tokens);
         checkGoalReached();
         FundTransfer(msg.sender, amount, true);
