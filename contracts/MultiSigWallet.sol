@@ -38,7 +38,7 @@ contract MultiSigWallet {
     uint public mtcDailySpent;
     uint public lastDay;
     uint public mtcLastDay;
-    address public MTC;
+    token public MTC;
     struct Transaction {
         address destination;
         uint value;
@@ -206,14 +206,14 @@ contract MultiSigWallet {
     function changeMtcDailyLimit(uint _limit)
     public
     onlyWallet
-    validDailyMtcLimit(_limit)
+    validDailyMTCLimit(_limit)
     {
         mtcDailyLimit = _limit;
         MtcDailyLimitChange(_limit);
     }
 
     /// @dev Allows to change the token address. Transaction has to be sent by wallet.
-    /// @param _limit Daily mtc limit.
+    /// @param _token token address.
     function setToken(address _token)
     public
     onlyWallet
@@ -282,7 +282,7 @@ contract MultiSigWallet {
     /// @dev Allows anyone to execute a confirmed transaction.
     /// @param _to Destination address.
     /// @param _value amount.
-    function softMtcTransfer(address _to,uint _value,address _token)
+    function softMtcTransfer(address _to,uint _value)
     public
     ownerExists(msg.sender)
     {
