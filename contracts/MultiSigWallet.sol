@@ -1,4 +1,7 @@
 pragma solidity 0.4.18;
+interface token {
+    function transfer(address _to, uint256 _value) public;
+}
 /// @title Multisignature wallet - Allows multiple parties to agree on transactions before execution.
 contract MultiSigWallet {
     /*
@@ -14,6 +17,8 @@ contract MultiSigWallet {
     event OwnerRemoval(address indexed owner);
     event RequirementChange(uint required);
     event EthDailyLimitChange(uint limit);
+    event MtcDailyLimitChange(uint limit);
+    event TokenChange(address _token);
     /*
      *  Constants
      */
@@ -28,8 +33,12 @@ contract MultiSigWallet {
     uint public required;
     uint public transactionCount;
     uint public ethDailyLimit;
+    uint public mtcDailyLimit;
     uint public dailySpent;
+    uint public mtcDailySpent;
     uint public lastDay;
+    uint public mtcLastDay;
+    address public MTC;
     struct Transaction {
         address destination;
         uint value;
@@ -83,6 +92,10 @@ contract MultiSigWallet {
         require (_limit >= 0);
         _;
     }
+    modifier validDailyMTCLimit(uint _limit) {
+        require (_limit >= 0);
+        _;
+    }
     /// @dev Fallback function allows to deposit ether.
     function()
     payable public
@@ -96,7 +109,7 @@ contract MultiSigWallet {
     /// @dev Contract constructor sets initial owners and required number of confirmations.
     /// @param _owners List of initial owners.
     /// @param _required Number of required confirmations.
-    function MultiSigWallet(address[] _owners, uint _required, uint _ethDailyLimit)
+    function MultiSigWallet(address[] _owners, uint _required, uint _ethDailyLimit, uint _mtcDailyLimit)
     public
     validRequirement(_owners.length, _required)
     {
@@ -107,7 +120,9 @@ contract MultiSigWallet {
         owners = _owners;
         required = _required;
         ethDailyLimit = _ethDailyLimit * 1 ether;
+        mtcDailyLimit = _mtcDailyLimit * 1 ether;
         lastDay = toDays(now);
+        mtcLastDay = toDays(now);
     }
 
     function toDays(uint _time) pure internal returns (uint) {
@@ -175,7 +190,7 @@ contract MultiSigWallet {
         RequirementChange(_required);
     }
 
-    /// @dev Allows to change the eth daily limit. Transaction has to be sent by wallet.
+    /// @dev Allows to change the eth daily transfer limit. Transaction has to be sent by wallet.
     /// @param _limit Daily eth limit.
     function changeEthDailyLimit(uint _limit)
     public
@@ -184,6 +199,27 @@ contract MultiSigWallet {
     {
         ethDailyLimit = _limit;
         EthDailyLimitChange(_limit);
+    }
+
+    /// @dev Allows to change the mtc daily transfer limit. Transaction has to be sent by wallet.
+    /// @param _limit Daily mtc limit.
+    function changeMtcDailyLimit(uint _limit)
+    public
+    onlyWallet
+    validDailyMtcLimit(_limit)
+    {
+        mtcDailyLimit = _limit;
+        MtcDailyLimitChange(_limit);
+    }
+
+    /// @dev Allows to change the token address. Transaction has to be sent by wallet.
+    /// @param _limit Daily mtc limit.
+    function setToken(address _token)
+    public
+    onlyWallet
+    {
+        MTC = token(_token);
+        TokenChange(_token);
     }
 
     /// @dev Allows an owner to submit and confirm a transaction.
@@ -241,6 +277,25 @@ contract MultiSigWallet {
         } else {
             revert();
         }
+    }
+
+    /// @dev Allows anyone to execute a confirmed transaction.
+    /// @param _to Destination address.
+    /// @param _value amount.
+    function softMtcTransfer(address _to,uint _value,address _token)
+    public
+    ownerExists(msg.sender)
+    {
+        require(_value>0);
+        _value *= 1 ether;
+        if(mtcLastDay != toDays(now) ){
+            mtcDailySpent = 0;
+            mtcLastDay = toDays(now);
+        }
+        require((mtcDailySpent+_value) <= mtcDailyLimit);
+        MTC.transfer(_to,_value);
+        mtcDailySpent += _value;
+
     }
 
     /// @dev Allows anyone to execute a confirmed transaction.

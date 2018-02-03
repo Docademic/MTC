@@ -11,6 +11,7 @@ contract CrowdSale {
     uint public startTime;
     uint public deadline;
     uint public price;
+    uint public bonus;
     token public tokenReward;
     mapping(address => uint256) public balanceOf;
     bool fundingGoalReached = false;
@@ -30,14 +31,16 @@ contract CrowdSale {
         uint fundingGoalInEthers,
         uint startTimeInSeconds,
         uint durationInMinutes,
-        uint szaboCostOfEachToken,
+        uint ethCostOfEachToken,
+        uint bonusEachToken,
         address addressOfTokenUsedAsReward
     ) public {
         beneficiary = ifSuccessfulSendTo;
         fundingGoal = fundingGoalInEthers * 1 ether;
         startTime = startTimeInSeconds;
         deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
-        price = szaboCostOfEachToken * 1 finney;
+        price = ethCostOfEachToken * 1 ether;
+        bonus = bonusEachToken;
         tokenReward = token(addressOfTokenUsedAsReward);
     }
 
@@ -49,7 +52,8 @@ contract CrowdSale {
         uint amount = msg.value;
         balanceOf[msg.sender] += amount;
         amountRaised += amount;
-        tokenReward.transferFrom(beneficiary, msg.sender, (amount * price) / 1 ether);
+        uint tokens = (amount * price) + ((amount * price * bonus) / 100);
+        tokenReward.transferFrom(beneficiary, msg.sender, tokens);
         checkGoalReached();
         FundTransfer(msg.sender, amount, true);
     }
