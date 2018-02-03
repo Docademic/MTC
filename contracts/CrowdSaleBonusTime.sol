@@ -14,7 +14,6 @@ contract CrowdSale {
     uint public endSecondBonus;
     uint public endThirdBonus;
     uint public price;
-    uint public bonus;
     uint public decDiff;
     token public tokenReward;
     mapping(address => uint256) public balanceOf;
@@ -44,7 +43,6 @@ contract CrowdSale {
         startTime = startTimeInSeconds;
         deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
         price = tokensPerEth * 1 ether;
-        bonus = bonusEachToken;
         tokenReward = token(addressOfTokenUsedAsReward);
         decDiff = decimalsDifftoEth;
         endFirstBonus = addDays(startTime,4);
@@ -174,9 +172,9 @@ contract CrowdSale {
         }
     }
 
-    function getBonus() view internal returns (uint) {
+    function getBonus() view public returns (uint) {
         if(startTime >= now){
-            if(now<=endFirstBonus){
+            if(now <= endFirstBonus){
                 return 50;
             } else if(now <= endSecondBonus) {
                 return 40;
