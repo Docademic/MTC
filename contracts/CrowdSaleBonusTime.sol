@@ -15,6 +15,7 @@ contract CrowdSale {
     uint public endThirdBonus;
     uint public hardCap;
     uint public price;
+    uint public minPurchase;
     token public tokenReward;
     mapping(address => uint256) public balanceOf;
     bool fundingGoalReached = false;
@@ -33,6 +34,7 @@ contract CrowdSale {
         address ifSuccessfulSendTo,
         address addressOfTokenUsedAsReward,
         uint tokensPerEth,
+        uint _minPurchase,
         uint fundingGoalInWei,
         uint hardCapInWei,
         uint startTimeInSeconds,
@@ -44,6 +46,7 @@ contract CrowdSale {
         beneficiary = ifSuccessfulSendTo;
         tokenReward = token(addressOfTokenUsedAsReward);
         price = tokensPerEth;
+        minPurchase = _minPurchase;
         fundingGoal = fundingGoalInWei;
         hardCap = hardCapInWei;
         startTime = startTimeInSeconds;
@@ -78,6 +81,7 @@ contract CrowdSale {
     isOpen
     afterStart
     hardCapNotReached
+    aboveMinValue
     public {
         purchase();
     }
@@ -91,6 +95,7 @@ contract CrowdSale {
     isOpen
     afterStart
     hardCapNotReached
+    aboveMinValue
     public returns (bool success) {
         purchase();
         return true;
@@ -131,6 +136,11 @@ contract CrowdSale {
         _;
     }
 
+    modifier aboveMinValue() {
+        require(msg.value >= minPurchase);
+        _;
+    }
+
     /**
      * Check if goal was reached
      *
@@ -151,6 +161,16 @@ contract CrowdSale {
     public {
         crowdsaleClosed = true;
         CrowdsaleClose(amountRaised, fundingGoalReached);
+    }
+
+    /**
+     * Change min purchase value
+     *
+     */
+    function setMinPurchaseValue(uint _minPurchaseValue)
+    isOwner
+    public {
+        minPurchase = _minPurchase;
     }
 
     /**
