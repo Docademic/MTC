@@ -14,9 +14,10 @@ contract CrowdSale {
     uint public bonus;
     uint public decDiff;
     token public tokenReward;
+    uint public hardCap;
     mapping(address => uint256) public balanceOf;
     bool fundingGoalReached = false;
-    bool public crowdsaleClosed = false ;
+    bool public crowdsaleClosed = false;
 
     event GoalReached(address recipient, uint totalAmountRaised);
     event FundTransfer(address backer, uint amount, bool isContribution);
@@ -29,22 +30,24 @@ contract CrowdSale {
      */
     function CrowdSale(
         address ifSuccessfulSendTo,
-        uint fundingGoalInEthers,
-        uint startTimeInSeconds,
-        uint durationInMinutes,
+        address addressOfTokenUsedAsReward,
         uint tokensPerEth,
         uint bonusEachToken,
         uint decimalsDifftoEth,
-        address addressOfTokenUsedAsReward
+        uint fundingGoalInEthers,
+        uint hardCapInEth,
+        uint startTimeInSeconds,
+        uint durationInMinutes
     ) public {
         beneficiary = ifSuccessfulSendTo;
-        fundingGoal = fundingGoalInEthers * 1 ether;
-        startTime = startTimeInSeconds;
-        deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
+        tokenReward = token(addressOfTokenUsedAsReward);
         price = tokensPerEth * 1 ether;
         bonus = bonusEachToken;
-        tokenReward = token(addressOfTokenUsedAsReward);
         decDiff = decimalsDifftoEth;
+        fundingGoal = fundingGoalInEthers * 1 ether;
+        hardCap = hardCapInEth * 1 ether;
+        startTime = startTimeInSeconds;
+        deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
     }
 
     /**
@@ -54,7 +57,7 @@ contract CrowdSale {
     function purchase() internal {
         uint amount = msg.value;
         uint vp = amount * price;
-        uint tokens = ((vp + ((vp * bonus) / 100)) / 10**decDiff) / 1 ether;
+        uint tokens = ((vp + ((vp * bonus) / 100)) / 10 ** decDiff) / 1 ether;
         balanceOf[msg.sender] += amount;
         amountRaised += amount;
         tokenReward.transferFrom(beneficiary, msg.sender, tokens);
@@ -71,6 +74,7 @@ contract CrowdSale {
     payable
     isOpen
     afterStart
+    hardCapNotReached
     public {
         purchase();
     }
@@ -79,7 +83,12 @@ contract CrowdSale {
      * The function called only from shiftsale
      *
      */
-    function shiftSalePurchase() payable public returns(bool success) {
+    function shiftSalePurchase()
+    payable
+    isOpen
+    afterStart
+    hardCapNotReached
+    public returns (bool success) {
         purchase();
         return true;
     }
@@ -100,7 +109,7 @@ contract CrowdSale {
     }
 
     modifier isOwner() {
-        require (msg.sender == beneficiary);
+        require(msg.sender == beneficiary);
         _;
     }
 
@@ -111,6 +120,11 @@ contract CrowdSale {
 
     modifier isOpen() {
         require(!crowdsaleClosed);
+        _;
+    }
+
+    modifier hardCapNotReached() {
+        require(amountRaised < hardCap);
         _;
     }
 

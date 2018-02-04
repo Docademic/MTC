@@ -13,12 +13,12 @@ contract CrowdSale {
     uint public endFirstBonus;
     uint public endSecondBonus;
     uint public endThirdBonus;
+    uint public hardCap;
     uint public price;
-    uint public decDiff;
     token public tokenReward;
     mapping(address => uint256) public balanceOf;
     bool fundingGoalReached = false;
-    bool public crowdsaleClosed = false ;
+    bool public crowdsaleClosed = false;
 
     event GoalReached(address recipient, uint totalAmountRaised);
     event FundTransfer(address backer, uint amount, bool isContribution);
@@ -31,23 +31,25 @@ contract CrowdSale {
      */
     function CrowdSale(
         address ifSuccessfulSendTo,
-        uint fundingGoalInEthers,
+        address addressOfTokenUsedAsReward,
+        uint tokensPerEth,
+        uint fundingGoalInWei,
+        uint hardCapInWei,
         uint startTimeInSeconds,
         uint durationInMinutes,
-        uint tokensPerEth,
-        uint decimalsDifftoEth,
-        address addressOfTokenUsedAsReward
+        uint _endFirstBonus,
+        uint _endSecondBonus,
+        uint _endThirdBonus
     ) public {
         beneficiary = ifSuccessfulSendTo;
-        fundingGoal = fundingGoalInEthers * 1 ether;
+        tokenReward = token(addressOfTokenUsedAsReward);
+        price = tokensPerEth;
+        fundingGoal = fundingGoalInWei;
+        hardCap = hardCapInWei;
         startTime = startTimeInSeconds;
         deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
-        price = tokensPerEth * 1 ether;
-        tokenReward = token(addressOfTokenUsedAsReward);
-        decDiff = decimalsDifftoEth;
-        endFirstBonus = addDays(startTime,4);
-        endSecondBonus = addDays(endFirstBonus,4);
-        endThirdBonus = addDays(endSecondBonus,4);
+        endFirstBonus = _endFirstBonus;
+        endSecondBonus = _endSecondBonus;
     }
 
     /**
@@ -57,7 +59,7 @@ contract CrowdSale {
     function purchase() internal {
         uint amount = msg.value;
         uint vp = amount * price;
-        uint tokens = ((vp + ((vp * getBonus()) / 100)) / 10**decDiff) / 1 ether;
+        uint tokens = ((vp + ((vp * getBonus()) / 100))) / 1 ether;
         balanceOf[msg.sender] += amount;
         amountRaised += amount;
         tokenReward.transferFrom(beneficiary, msg.sender, tokens);
@@ -74,6 +76,7 @@ contract CrowdSale {
     payable
     isOpen
     afterStart
+    hardCapNotReached
     public {
         purchase();
     }
@@ -82,7 +85,12 @@ contract CrowdSale {
      * The function called only from shiftsale
      *
      */
-    function shiftSalePurchase() payable public returns(bool success) {
+    function shiftSalePurchase()
+    payable
+    isOpen
+    afterStart
+    hardCapNotReached
+    public returns (bool success) {
         purchase();
         return true;
     }
@@ -103,7 +111,7 @@ contract CrowdSale {
     }
 
     modifier isOwner() {
-        require (msg.sender == beneficiary);
+        require(msg.sender == beneficiary);
         _;
     }
 
@@ -114,6 +122,11 @@ contract CrowdSale {
 
     modifier isOpen() {
         require(!crowdsaleClosed);
+        _;
+    }
+
+    modifier hardCapNotReached() {
+        require(amountRaised < hardCap);
         _;
     }
 
@@ -173,21 +186,17 @@ contract CrowdSale {
     }
 
     function getBonus() view public returns (uint) {
-        if(startTime >= now){
-            if(now <= endFirstBonus){
+        if (startTime <= now) {
+            if (now <= endFirstBonus) {
                 return 50;
-            } else if(now <= endSecondBonus) {
+            } else if (now <= endSecondBonus) {
                 return 40;
-            } else if(now <= endThirdBonus) {
+            } else if (now <= endThirdBonus) {
                 return 30;
             } else {
                 return 20;
             }
         }
         return 0;
-    }
-
-    function addDays(uint _time, uint _days) pure internal returns (uint) {
-        return _time + 60 * 60 * 24 * _days;
     }
 }

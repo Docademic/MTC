@@ -1,4 +1,5 @@
 pragma solidity 0.4.18;
+
 interface token {
     function transfer(address _to, uint256 _value) public;
 }
@@ -26,9 +27,9 @@ contract MultiSigWallet {
     /*
      *  Storage
      */
-    mapping (uint => Transaction) public transactions;
-    mapping (uint => mapping (address => bool)) public confirmations;
-    mapping (address => bool) public isOwner;
+    mapping(uint => Transaction) public transactions;
+    mapping(uint => mapping(address => bool)) public confirmations;
+    mapping(address => bool) public isOwner;
     address[] public owners;
     uint public required;
     uint public transactionCount;
@@ -39,6 +40,7 @@ contract MultiSigWallet {
     uint public lastDay;
     uint public mtcLastDay;
     token public MTC;
+
     struct Transaction {
         address destination;
         uint value;
@@ -89,11 +91,11 @@ contract MultiSigWallet {
         _;
     }
     modifier validDailyEthLimit(uint _limit) {
-        require (_limit >= 0);
+        require(_limit >= 0);
         _;
     }
     modifier validDailyMTCLimit(uint _limit) {
-        require (_limit >= 0);
+        require(_limit >= 0);
         _;
     }
     /// @dev Fallback function allows to deposit ether.
@@ -113,7 +115,7 @@ contract MultiSigWallet {
     public
     validRequirement(_owners.length, _required)
     {
-        for (uint i=0; i<_owners.length; i++) {
+        for (uint i = 0; i < _owners.length; i++) {
             require(!isOwner[_owners[i]] && _owners[i] != 0);
             isOwner[_owners[i]] = true;
         }
@@ -126,7 +128,7 @@ contract MultiSigWallet {
     }
 
     function toDays(uint _time) pure internal returns (uint) {
-        return _time / (60*60*24);
+        return _time / (60 * 60 * 24);
     }
 
     /// @dev Allows to add a new owner. Transaction has to be sent by wallet.
@@ -150,7 +152,7 @@ contract MultiSigWallet {
     ownerExists(owner)
     {
         isOwner[owner] = false;
-        for (uint i=0; i<owners.length - 1; i++)
+        for (uint i = 0; i < owners.length - 1; i++)
             if (owners[i] == owner) {
                 owners[i] = owners[owners.length - 1];
                 break;
@@ -169,7 +171,7 @@ contract MultiSigWallet {
     ownerExists(owner)
     ownerDoesNotExist(newOwner)
     {
-        for (uint i=0; i<owners.length; i++)
+        for (uint i = 0; i < owners.length; i++)
             if (owners[i] == owner) {
                 owners[i] = newOwner;
                 break;
@@ -261,18 +263,18 @@ contract MultiSigWallet {
     /// @dev Allows anyone to execute a confirmed transaction.
     /// @param _to Destination address.
     /// @param _value amount.
-    function softEthTransfer(address _to,uint _value)
+    function softEthTransfer(address _to, uint _value)
     public
     ownerExists(msg.sender)
     {
-        require(_value>0);
+        require(_value > 0);
         _value *= 1 finney;
-        if(lastDay != toDays(now) ){
+        if (lastDay != toDays(now)) {
             dailySpent = 0;
             lastDay = toDays(now);
         }
-        require((dailySpent+_value) <= ethDailyLimit);
-        if (_to.send(_value)){
+        require((dailySpent + _value) <= ethDailyLimit);
+        if (_to.send(_value)) {
             dailySpent += _value;
         } else {
             revert();
@@ -282,18 +284,18 @@ contract MultiSigWallet {
     /// @dev Allows anyone to execute a confirmed transaction.
     /// @param _to Destination address.
     /// @param _value amount.
-    function softMtcTransfer(address _to,uint _value)
+    function softMtcTransfer(address _to, uint _value)
     public
     ownerExists(msg.sender)
     {
-        require(_value>0);
+        require(_value > 0);
         _value *= 1 ether;
-        if(mtcLastDay != toDays(now) ){
+        if (mtcLastDay != toDays(now)) {
             mtcDailySpent = 0;
             mtcLastDay = toDays(now);
         }
-        require((mtcDailySpent+_value) <= mtcDailyLimit);
-        MTC.transfer(_to,_value);
+        require((mtcDailySpent + _value) <= mtcDailyLimit);
+        MTC.transfer(_to, _value);
         mtcDailySpent += _value;
 
     }
@@ -326,7 +328,7 @@ contract MultiSigWallet {
     returns (bool)
     {
         uint count = 0;
-        for (uint i=0; i<owners.length; i++) {
+        for (uint i = 0; i < owners.length; i++) {
             if (confirmations[transactionId][owners[i]])
                 count += 1;
             if (count == required)
@@ -349,11 +351,11 @@ contract MultiSigWallet {
     {
         transactionId = transactionCount;
         transactions[transactionId] = Transaction({
-            destination: destination,
-            value: value,
-            description: description,
-            data: data,
-            executed: false
+            destination : destination,
+            value : value,
+            description : description,
+            data : data,
+            executed : false
             });
         transactionCount += 1;
         Submission(transactionId);
@@ -380,7 +382,7 @@ contract MultiSigWallet {
     constant
     returns (uint count)
     {
-        for (uint i=0; i<owners.length; i++)
+        for (uint i = 0; i < owners.length; i++)
             if (confirmations[transactionId][owners[i]])
                 count += 1;
     }
@@ -393,8 +395,8 @@ contract MultiSigWallet {
     constant
     returns (uint count)
     {
-        for (uint i=0; i<transactionCount; i++)
-            if (   pending && !transactions[i].executed
+        for (uint i = 0; i < transactionCount; i++)
+            if (pending && !transactions[i].executed
             || executed && transactions[i].executed)
                 count += 1;
     }
@@ -409,13 +411,13 @@ contract MultiSigWallet {
         address[] memory confirmationsTemp = new address[](owners.length);
         uint count = 0;
         uint i;
-        for (i=0; i<owners.length; i++)
+        for (i = 0; i < owners.length; i++)
             if (confirmations[transactionId][owners[i]]) {
                 confirmationsTemp[count] = owners[i];
                 count += 1;
             }
         _confirmations = new address[](count);
-        for (i=0; i<count; i++)
+        for (i = 0; i < count; i++)
             _confirmations[i] = confirmationsTemp[i];
     }
     /// @dev Returns list of transaction IDs in defined range.
@@ -432,15 +434,15 @@ contract MultiSigWallet {
         uint[] memory transactionIdsTemp = new uint[](transactionCount);
         uint count = 0;
         uint i;
-        for (i=0; i<transactionCount; i++)
-            if (   pending && !transactions[i].executed
+        for (i = 0; i < transactionCount; i++)
+            if (pending && !transactions[i].executed
             || executed && transactions[i].executed)
             {
                 transactionIdsTemp[count] = i;
                 count += 1;
             }
         _transactionIds = new uint[](to - from);
-        for (i=from; i<to; i++)
+        for (i = from; i < to; i++)
             _transactionIds[i - from] = transactionIdsTemp[i];
     }
 }
