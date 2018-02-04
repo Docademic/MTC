@@ -50,6 +50,7 @@ contract CrowdSale {
         deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
         endFirstBonus = _endFirstBonus;
         endSecondBonus = _endSecondBonus;
+        endThirdBonus = _endThirdBonus;
     }
 
     /**
