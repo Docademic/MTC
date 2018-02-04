@@ -167,7 +167,7 @@ contract CrowdSale {
      * Change min purchase value
      *
      */
-    function setMinPurchaseValue(uint _minPurchaseValue)
+    function setMinPurchaseValue(uint _minPurchase)
     isOwner
     public {
         minPurchase = _minPurchase;
