@@ -11,11 +11,10 @@ contract CrowdSale {
     uint public price;
     uint public decDiff;
     token public tokenReward;
-    bool public closed = false;
+    bool public crowdsaleClosed = false;
 
-    event GoalReached(address recipient, uint totalAmountRaised);
-    event FundTransfer(address backer, uint amount, bool isContribution);
-    event CrowdsaleClose(uint totalAmountRaised, bool fundingGoalReached);
+    event FundTransfer(address backer);
+    event CrowdsaleClose();
 
     /**
      * Constrctor function
@@ -26,37 +25,16 @@ contract CrowdSale {
         address ifSuccessfulSendTo,
         address addressOfTokenUsedAsReward,
         uint tokensPerEth,
-        uint bonusEachToken,
         uint decimalsDifftoEth,
-        uint fundingGoalInEthers,
-        uint hardCapInEth,
         uint startTimeInSeconds,
         uint durationInMinutes
     ) public {
         beneficiary = ifSuccessfulSendTo;
         tokenReward = token(addressOfTokenUsedAsReward);
         price = tokensPerEth * 1 ether;
-        bonus = bonusEachToken;
         decDiff = decimalsDifftoEth;
-        fundingGoal = fundingGoalInEthers * 1 ether;
-        hardCap = hardCapInEth * 1 ether;
         startTime = startTimeInSeconds;
         deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
-    }
-
-    /**
-     * Do purchase process
-     *
-     */
-    function purchase() internal {
-        uint amount = msg.value;
-        uint vp = amount * price;
-        uint tokens = ((vp + ((vp * bonus) / 100)) / 10 ** decDiff) / 1 ether;
-        balanceOf[msg.sender] += amount;
-        amountRaised += amount;
-        tokenReward.transferFrom(beneficiary, msg.sender, tokens);
-        checkGoalReached();
-        FundTransfer(msg.sender, amount, true);
     }
 
     /**
@@ -68,24 +46,14 @@ contract CrowdSale {
     payable
     isOpen
     afterStart
-    hardCapNotReached
     public {
-        purchase();
+        uint vp = msg.value * price;
+        uint tokens = vp / 10 ** decDiff / 1 ether;
+        tokenReward.transferFrom(beneficiary, msg.sender, tokens);
+        FundTransfer(msg.sender);
     }
 
-    /**
-     * The function called only from shiftsale
-     *
-     */
-    function shiftSalePurchase()
-    payable
-    isOpen
-    afterStart
-    hardCapNotReached
-    public returns (bool success) {
-        purchase();
-        return true;
-    }
+
 
     modifier afterStart() {
         require(now >= startTime);
@@ -117,22 +85,6 @@ contract CrowdSale {
         _;
     }
 
-    modifier hardCapNotReached() {
-        require(amountRaised < hardCap);
-        _;
-    }
-
-    /**
-     * Check if goal was reached
-     *
-     */
-    function checkGoalReached() internal {
-        if (amountRaised >= fundingGoal && !fundingGoalReached) {
-            fundingGoalReached = true;
-            GoalReached(beneficiary, amountRaised);
-        }
-    }
-
     /**
      * Close the crowdsale
      *
@@ -141,7 +93,7 @@ contract CrowdSale {
     isOwner
     public {
         crowdsaleClosed = true;
-        CrowdsaleClose(amountRaised, fundingGoalReached);
+        CrowdsaleClose();
     }
 
 
@@ -155,26 +107,12 @@ contract CrowdSale {
     function safeWithdrawal()
     afterDeadline
     isClosed
+    isOwner
     public {
-        if (!fundingGoalReached) {
-            uint amount = balanceOf[msg.sender];
-            balanceOf[msg.sender] = 0;
-            if (amount > 0) {
-                if (msg.sender.send(amount)) {
-                    FundTransfer(msg.sender, amount, false);
-                } else {
-                    balanceOf[msg.sender] = amount;
-                }
-            }
+
+        if (beneficiary.send(this.balance)) {
+            FundTransfer(beneficiary);
         }
 
-        if (fundingGoalReached && beneficiary == msg.sender) {
-            if (beneficiary.send(amountRaised)) {
-                FundTransfer(beneficiary, amountRaised, false);
-            } else {
-                //If we fail to send the funds to beneficiary, unlock funders balance
-                fundingGoalReached = false;
-            }
-        }
     }
 }
