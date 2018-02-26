@@ -32,7 +32,7 @@ contract CrowdSale {
     ) public {
         beneficiary = ifSuccessfulSendTo;
         tokenReward = token(addressOfTokenUsedAsReward);
-        price = tokensPerEth * 1 ether;
+        price = tokensPerEth;
         minPurchase = _minPurchase;
     }
 
