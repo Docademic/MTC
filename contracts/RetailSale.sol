@@ -9,12 +9,16 @@ contract CrowdSale {
     uint public startTime;
     uint public deadline;
     uint public price;
-    uint public decDiff;
+    uint public bonus = 0;
+    uint public bonusStart = 0;
+    uint public bonusEnd = 0;
+    uint public milestone = 0;
+    uint public milestoneBonus = 0;
+    bool public milestoneReached = false;
     token public tokenReward;
-    bool public crowdsaleClosed = false;
+    bool public closed = false;
 
-    event FundTransfer(address backer);
-    event CrowdsaleClose();
+    event FundTransfer(address backer, uint amount, uint bonus, uint tokens);
 
     /**
      * Constrctor function
@@ -25,16 +29,14 @@ contract CrowdSale {
         address ifSuccessfulSendTo,
         address addressOfTokenUsedAsReward,
         uint tokensPerEth,
-        uint decimalsDifftoEth,
         uint startTimeInSeconds,
-        uint durationInMinutes
+        uint endTimeInSeconds
     ) public {
         beneficiary = ifSuccessfulSendTo;
         tokenReward = token(addressOfTokenUsedAsReward);
         price = tokensPerEth * 1 ether;
-        decDiff = decimalsDifftoEth;
         startTime = startTimeInSeconds;
-        deadline = startTimeInSeconds + durationInMinutes * 1 minutes;
+        deadline = endTimeInSeconds;
     }
 
     /**
@@ -45,12 +47,27 @@ contract CrowdSale {
     function()
     payable
     isOpen
+    previousDeadline
     afterStart
     public {
-        uint vp = msg.value * price;
-        uint tokens = vp / 10 ** decDiff / 1 ether;
+        uint amount = msg.value;
+        uint vp = amount * price;
+        uint b = 0;
+        uint tokens = 0;
+        if (now >= bonusStart && now <= bonusEnd) {
+            b = bonus;
+        }
+        if (this.balance >= milestone && !milestoneReached) {
+            b = milestoneBonus;
+            milestoneReached = true;
+        }
+        if (b == 0) {
+            tokens = vp / 1 ether;
+        } else {
+            tokens = (vp + ((vp * b) / 100)) / 1 ether;
+        }
         tokenReward.transferFrom(beneficiary, msg.sender, tokens);
-        FundTransfer(msg.sender);
+        FundTransfer(msg.sender, msg.value, b, tokens);
     }
 
 
@@ -76,12 +93,12 @@ contract CrowdSale {
     }
 
     modifier isClosed() {
-        require(crowdsaleClosed);
+        require(closed);
         _;
     }
 
     modifier isOpen() {
-        require(!crowdsaleClosed);
+        require(!closed);
         _;
     }
 
@@ -92,8 +109,34 @@ contract CrowdSale {
     function closeCrowdsale()
     isOwner
     public {
-        crowdsaleClosed = true;
-        CrowdsaleClose();
+        closed = true;
+    }
+
+    /**
+     * Change the bonus percentage
+     * @param _bonus the new bonus percentage.
+     * @param _bonusStart When the bonus starts.
+     * @param _bonusEnd When the bonus ends.
+     */
+    function changeBonus(uint _bonus, uint _bonusStart, uint _bonusEnd)
+    isOwner
+    public {
+        bonus = _bonus;
+        bonusStart = _bonusStart;
+        bonusEnd = _bonusEnd;
+    }
+
+    /**
+     * Change the next milestone
+     * @param _milestone The next milestone amount
+     * @param _milestoneBonus The bonus of the next milestone
+     */
+    function setNextMilestone(uint _milestone, uint _milestoneBonus)
+    isOwner
+    public {
+        milestone = _milestone;
+        milestoneBonus = _milestoneBonus;
+        milestoneReached = false;
     }
 
 
@@ -110,9 +153,8 @@ contract CrowdSale {
     isOwner
     public {
 
-        if (beneficiary.send(this.balance)) {
-            FundTransfer(beneficiary);
-        }
+        beneficiary.transfer(this.balance);
 
     }
+
 }
