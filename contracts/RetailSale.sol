@@ -88,7 +88,7 @@ contract RetailSale {
 
     /**
      * Toggle the crowdsale state
-     * @param _closed the new state.
+     * @param _closed the new state bool.
      */
     function toggleCrowdsale(bool _closed)
     isOwner
@@ -97,10 +97,20 @@ contract RetailSale {
     }
 
     /**
+     * Set the new min purchase value
+     * @param _minPurchase the new minpurchase value in wei.
+     */
+    function setMinPurchase(uint _minPurchase)
+    isOwner
+    public {
+        minPurchase = _minPurchase;
+    }
+
+    /**
      * Change the bonus percentage
      * @param _bonus the new bonus percentage.
-     * @param _bonusStart When the bonus starts.
-     * @param _bonusEnd When the bonus ends.
+     * @param _bonusStart When the bonus starts in seconds.
+     * @param _bonusEnd When the bonus ends in seconds.
      */
     function changeBonus(uint _bonus, uint _bonusStart, uint _bonusEnd)
     isOwner
@@ -112,7 +122,7 @@ contract RetailSale {
 
     /**
      * Change the next milestone
-     * @param _milestone The next milestone amount
+     * @param _milestone The next milestone amount in wei
      * @param _milestoneBonus The bonus of the next milestone
      */
     function setNextMilestone(uint _milestone, uint _milestoneBonus)
