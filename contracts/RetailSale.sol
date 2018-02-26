@@ -6,8 +6,6 @@ interface token {
 
 contract CrowdSale {
     address public beneficiary;
-    uint public startTime;
-    uint public deadline;
     uint public price;
     uint public bonus = 0;
     uint public bonusStart = 0;
@@ -15,8 +13,9 @@ contract CrowdSale {
     uint public milestone = 0;
     uint public milestoneBonus = 0;
     bool public milestoneReached = false;
-    token public tokenReward;
+    uint public minPurchase;
     bool public closed = false;
+    token public tokenReward;
 
     event FundTransfer(address backer, uint amount, uint bonus, uint tokens);
 
@@ -29,14 +28,12 @@ contract CrowdSale {
         address ifSuccessfulSendTo,
         address addressOfTokenUsedAsReward,
         uint tokensPerEth,
-        uint startTimeInSeconds,
-        uint endTimeInSeconds
+        uint _minPurchase
     ) public {
         beneficiary = ifSuccessfulSendTo;
         tokenReward = token(addressOfTokenUsedAsReward);
         price = tokensPerEth * 1 ether;
-        startTime = startTimeInSeconds;
-        deadline = endTimeInSeconds;
+        minPurchase = _minPurchase;
     }
 
     /**
@@ -47,8 +44,7 @@ contract CrowdSale {
     function()
     payable
     isOpen
-    previousDeadline
-    afterStart
+    aboveMinValue
     public {
         uint amount = msg.value;
         uint vp = amount * price;
@@ -70,20 +66,8 @@ contract CrowdSale {
         FundTransfer(msg.sender, msg.value, b, tokens);
     }
 
-
-
-    modifier afterStart() {
-        require(now >= startTime);
-        _;
-    }
-
-    modifier afterDeadline() {
-        require(now >= deadline);
-        _;
-    }
-
-    modifier previousDeadline() {
-        require(now <= deadline);
+    modifier aboveMinValue() {
+        require(msg.value >= minPurchase);
         _;
     }
 
@@ -103,13 +87,13 @@ contract CrowdSale {
     }
 
     /**
-     * Close the crowdsale
-     *
+     * Toggle the crowdsale state
+     * @param _closed the new state.
      */
-    function closeCrowdsale()
+    function toggleCrowdsale(bool _closed)
     isOwner
     public {
-        closed = true;
+        closed = _closed;
     }
 
     /**
@@ -148,7 +132,6 @@ contract CrowdSale {
      * the amount they contributed.
      */
     function safeWithdrawal()
-    afterDeadline
     isClosed
     isOwner
     public {
