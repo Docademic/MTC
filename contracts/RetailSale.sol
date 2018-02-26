@@ -24,7 +24,7 @@ contract RetailSale {
      *
      * Setup the owner
      */
-    function CrowdSale(
+    function RetailSale(
         address ifSuccessfulSendTo,
         address addressOfTokenUsedAsReward,
         uint tokensPerEth,
