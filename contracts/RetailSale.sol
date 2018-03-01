@@ -14,7 +14,7 @@ contract RetailSale {
     uint public milestoneBonus = 0;
     bool public milestoneReached = false;
     uint public minPurchase;
-    bool public closed = false;
+    bool public closed = true;
     token public tokenReward;
 
     event FundTransfer(address backer, uint amount, uint bonus, uint tokens);
