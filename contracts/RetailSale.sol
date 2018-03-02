@@ -6,7 +6,10 @@ interface token {
 
 contract RetailSale {
     address public beneficiary;
-    uint public price;
+    uint public actualPrice;
+    uint public nextPrice;
+    uint public nextPriceDate = 0;
+    uint public nextStart;
     uint public bonus = 0;
     uint public bonusStart = 0;
     uint public bonusEnd = 0;
@@ -14,7 +17,6 @@ contract RetailSale {
     uint public milestoneBonus = 0;
     bool public milestoneReached = false;
     uint public minPurchase;
-    bool public closed = true;
     token public tokenReward;
 
     event FundTransfer(address backer, uint amount, uint bonus, uint tokens);
@@ -25,15 +27,18 @@ contract RetailSale {
      * Setup the owner
      */
     function RetailSale(
-        address ifSuccessfulSendTo,
+        address _beneficiary,
         address addressOfTokenUsedAsReward,
-        uint tokensPerEth,
-        uint _minPurchase
+        uint ethPriceInWei,
+        uint _minPurchase,
+        uint start
     ) public {
-        beneficiary = ifSuccessfulSendTo;
+        beneficiary = _beneficiary;
         tokenReward = token(addressOfTokenUsedAsReward);
-        price = tokensPerEth;
+        actualPrice = ethPriceInWei;
+        nextPrice = ethPriceInWei;
         minPurchase = _minPurchase;
+        nextStart = start;
     }
 
     /**
@@ -46,8 +51,11 @@ contract RetailSale {
     isOpen
     aboveMinValue
     public {
-        uint amount = msg.value;
-        uint vp = amount * price;
+        uint price = actualPrice;
+        if(now >= nextPriceDate){
+            price = nextPrice;
+        }
+        uint vp = msg.value / price;
         uint b = 0;
         uint tokens = 0;
         if (now >= bonusStart && now <= bonusEnd) {
@@ -77,23 +85,23 @@ contract RetailSale {
     }
 
     modifier isClosed() {
-        require(closed);
+        require(now < nextStart);
         _;
     }
 
     modifier isOpen() {
-        require(!closed);
+        require(now >= nextStart);
         _;
     }
 
     /**
-     * Toggle the crowdsale state
-     * @param _closed the new state bool.
+     * Set next start date
+     * @param _nextStart the next start date in seconds.
      */
-    function toggleCrowdsale(bool _closed)
+    function setNextStartDate(uint _nextStart)
     isOwner
     public {
-        closed = _closed;
+        nextStart = _nextStart;
     }
 
     /**
@@ -133,6 +141,19 @@ contract RetailSale {
         milestoneReached = false;
     }
 
+    /**
+     * Set the next price
+     * @param _price The next eth price in wei
+     * @param _priceDate The date in second when the next price start
+     */
+    function setNextPrice(uint _price, uint _priceDate)
+    isOwner
+    public {
+        actualPrice = nextPrice;
+        nextPrice = _price;
+        nextPriceDate = _priceDate;
+    }
+
 
     /**
      * Withdraw the funds
@@ -148,6 +169,10 @@ contract RetailSale {
 
         beneficiary.transfer(this.balance);
 
+    }
+
+    function open() view public returns (bool) {
+        return now >= nextStart;
     }
 
 }
