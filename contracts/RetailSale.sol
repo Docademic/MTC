@@ -16,7 +16,7 @@ contract RetailSale {
     uint public bonusEnd = 0;
     uint public milestone = 0;
     uint public milestoneBonus = 0;
-    bool public milestoneReached = false;
+    bool public milestoneReached = true;
     uint public minPurchase;
     token public tokenReward;
 
