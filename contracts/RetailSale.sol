@@ -58,7 +58,7 @@ contract RetailSale {
         if (now >= nextPriceDate) {
             price = nextPrice;
         }
-        uint vp = msg.value / price;
+        uint vp = (msg.value / price) * 1 ether;
         uint b = 0;
         uint tokens = 0;
         if (now >= bonusStart && now <= bonusEnd) {
