@@ -9,7 +9,8 @@ contract RetailSale {
     uint public actualPrice;
     uint public nextPrice;
     uint public nextPriceDate = 0;
-    uint public nextStart;
+    uint public periodStart;
+    uint public periodEnd;
     uint public bonus = 0;
     uint public bonusStart = 0;
     uint public bonusEnd = 0;
@@ -31,14 +32,16 @@ contract RetailSale {
         address addressOfTokenUsedAsReward,
         uint ethPriceInWei,
         uint _minPurchase,
-        uint start
+        uint start,
+        uint end
     ) public {
         beneficiary = _beneficiary;
         tokenReward = token(addressOfTokenUsedAsReward);
         actualPrice = ethPriceInWei;
         nextPrice = ethPriceInWei;
         minPurchase = _minPurchase;
-        nextStart = start;
+        periodStart = start;
+        periodEnd = end;
     }
 
     /**
@@ -52,7 +55,7 @@ contract RetailSale {
     aboveMinValue
     public {
         uint price = actualPrice;
-        if(now >= nextPriceDate){
+        if (now >= nextPriceDate) {
             price = nextPrice;
         }
         uint vp = msg.value / price;
@@ -85,23 +88,31 @@ contract RetailSale {
     }
 
     modifier isClosed() {
-        require(now < nextStart);
+        require(!(now >= periodStart && now <= periodEnd));
         _;
     }
 
     modifier isOpen() {
-        require(now >= nextStart);
+        require(now >= periodStart && now <= periodEnd);
+        _;
+    }
+
+    modifier validPeriod(uint start, uint end){
+        require(start < end);
         _;
     }
 
     /**
      * Set next start date
-     * @param _nextStart the next start date in seconds.
+     * @param _start the next start date in seconds.
+     * @param _start the next end date in seconds.
      */
-    function setNextStartDate(uint _nextStart)
+    function setNextPeriod(uint _start, uint _end)
     isOwner
+    validPeriod(_start, _end)
     public {
-        nextStart = _nextStart;
+        periodStart = _start;
+        periodEnd = _end;
     }
 
     /**
@@ -172,7 +183,7 @@ contract RetailSale {
     }
 
     function open() view public returns (bool) {
-        return now >= nextStart;
+        return (now >= periodStart && now <= periodEnd);
     }
 
 }

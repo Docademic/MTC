@@ -1,4 +1,4 @@
-pragma solidity 0.4.18;
+pragma solidity ^0.4.18;
 
 interface token {
     function transfer(address _to, uint256 _value) public;
