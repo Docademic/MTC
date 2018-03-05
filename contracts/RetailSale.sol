@@ -69,9 +69,9 @@ contract RetailSale {
             milestoneReached = true;
         }
         if (b == 0) {
-            tokens = vp / 1 ether;
+            tokens = vp;
         } else {
-            tokens = (vp + ((vp * b) / 100)) / 1 ether;
+            tokens = (vp + ((vp * b) / 100));
         }
         tokenReward.transferFrom(beneficiary, msg.sender, tokens);
         FundTransfer(msg.sender, msg.value, b, tokens);
