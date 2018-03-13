@@ -2,6 +2,7 @@ pragma solidity ^0.4.0;
 
 import "./ownership/Ownable.sol";
 import "./math/SafeMath.sol";
+import "./util/Destroyable.sol";
 
 interface Token {
     function transfer(address _to, uint256 _value) public;
@@ -9,7 +10,7 @@ interface Token {
     function balanceOf(address who) public returns (uint256);
 }
 
-contract MultiVesting is Ownable {
+contract MultiVesting is Ownable, Destroyable {
     using SafeMath for uint256;
 
     // beneficiary of tokens
