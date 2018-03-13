@@ -111,7 +111,8 @@ contract MultiVesting is Ownable {
      * @param _revocable whether the vesting is revocable or not
      */
     function addBeneficiary(address _beneficiary, uint256 _vested, uint256 _start, uint256 _cliff, uint256 _duration, bool _revocable)
-    onlyOwner()
+    onlyOwner
+    isNotBeneficiary
     public {
         require(_beneficiary != address(0));
         require(_cliff <= _duration);
