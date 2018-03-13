@@ -1,10 +1,12 @@
 pragma solidity ^0.4.0;
 
-import "../ownership/Ownable.sol";
-import "../math/SafeMath.sol";
+import "./ownership/Ownable.sol";
+import "./math/SafeMath.sol";
 
 interface Token {
     function transfer(address _to, uint256 _value) public;
+
+    function balanceOf(address who) public returns (uint256);
 }
 
 contract MultiVesting is Ownable {
@@ -19,26 +21,38 @@ contract MultiVesting is Ownable {
         uint256 duration;
         bool revoked;
         bool revocable;
+        bool isBeneficiary;
     }
 
     event Released(address _beneficiary, uint256 amount);
     event Revoked(address _beneficiary);
-    event NewBeneficiary(address _beneficiary, Beneficiary _data);
+    event NewBeneficiary(address _beneficiary);
 
 
     mapping(address => Beneficiary) public beneficiaries;
-    mapping(address => bool) public isBeneficiary;
     Token public token;
+    uint256 public totalVested;
+    uint256 public totalReleased;
 
     /*
      *  Modifiers
      */
-    modifier beneficiaryDoesNotExist(address _beneficiary) {
-        require(!isBeneficiary[_beneficiary]);
+    modifier isNotBeneficiary(address _beneficiary) {
+        require(!beneficiaries[_beneficiary].isBeneficiary);
         _;
     }
-    modifier beneficiaryExists(address _beneficiary) {
-        require(isBeneficiary[_beneficiary]);
+    modifier isBeneficiary(address _beneficiary) {
+        require(beneficiaries[_beneficiary].isBeneficiary);
+        _;
+    }
+
+    modifier wasRevoked(address _beneficiary) {
+        require(beneficiaries[_beneficiary].revoked);
+        _;
+    }
+
+    modifier wasNotRevoked(address _beneficiary) {
+        require(!beneficiaries[_beneficiary].revoked);
         _;
     }
 
@@ -53,6 +67,41 @@ contract MultiVesting is Ownable {
         token = Token(_token);
     }
 
+    function() payable public {
+        release(msg.sender);
+    }
+
+    /**
+     * @notice Transfers vested tokens to beneficiary.
+     * @param _beneficiary Beneficiary address
+     */
+    function release(address _beneficiary) private
+    isBeneficiary(_beneficiary)
+    wasNotRevoked(_beneficiary)
+    {
+        Beneficiary storage beneficiary = beneficiaries[_beneficiary];
+
+        uint256 unreleased = releasableAmount(_beneficiary);
+
+        require(unreleased > 0);
+
+        beneficiary.released = beneficiary.released.add(unreleased);
+
+        totalReleased.add(unreleased);
+
+        token.transfer(_beneficiary, unreleased);
+
+        Released(_beneficiary, unreleased);
+    }
+
+    /**
+     * @notice Allows the owner to transfers vested tokens to beneficiary.
+     * @param _beneficiary Beneficiary address
+     */
+    function releaseTo(address _beneficiary) public onlyOwner {
+        release(_beneficiary);
+    }
+
     /**
      * @dev Add new beneficiary to start vesting
      * @param _beneficiary address of the beneficiary to whom vested tokens are transferred
@@ -61,82 +110,70 @@ contract MultiVesting is Ownable {
      * @param _duration duration in seconds of the period in which the tokens will vest
      * @param _revocable whether the vesting is revocable or not
      */
-    function addBeneficiary(address _beneficiary, uint256 _start, uint256 _cliff, uint256 _duration, bool _revocable)
+    function addBeneficiary(address _beneficiary, uint256 _vested, uint256 _start, uint256 _cliff, uint256 _duration, bool _revocable)
     onlyOwner()
     public {
         require(_beneficiary != address(0));
         require(_cliff <= _duration);
+        require(token.balanceOf(this) > totalVested.sub(totalReleased).add(_vested));
         beneficiaries[_beneficiary] = Beneficiary({
             released : 0,
-            vested : 0,
+            vested : _vested,
             start : _start,
             cliff : _cliff,
             duration : _duration,
             revoked : false,
-            revocable : _revocable
+            revocable : _revocable,
+            isBeneficiary : true
             });
-        NewBeneficiary(_beneficiary, beneficiaries[_beneficiary]);
-    }
-
-    /**
-     * @notice Transfers vested tokens to beneficiary.
-     * @param token ERC20 token which is being vested
-     */
-    function release() public {
-        uint256 unreleased = releasableAmount(token);
-
-        require(unreleased > 0);
-
-        released[token] = released[token].add(unreleased);
-
-        token.safeTransfer(beneficiary, unreleased);
-
-        Released(unreleased);
+        totalVested = totalVested.add(_vested);
+        NewBeneficiary(_beneficiary);
     }
 
     /**
      * @notice Allows the owner to revoke the vesting. Tokens already vested
      * remain in the contract, the rest are returned to the owner.
-     * @param token ERC20 token which is being vested
+     * @param _beneficiary Beneficiary address
      */
     function revoke(address _beneficiary) public onlyOwner {
-        require(revocable);
-        require(!revoked[token]);
+        Beneficiary storage beneficiary = beneficiaries[_beneficiary];
+        require(beneficiary.revocable);
+        require(!beneficiary.revoked);
 
         uint256 balance = token.balanceOf(this);
 
-        uint256 unreleased = releasableAmount(token);
+        uint256 unreleased = releasableAmount(_beneficiary);
         uint256 refund = balance.sub(unreleased);
 
-        revoked[token] = true;
+        beneficiary.revoked = true;
 
-        token.safeTransfer(owner, refund);
+        token.transfer(owner, refund);
 
-        Revoked();
+        Revoked(_beneficiary);
     }
 
     /**
      * @dev Calculates the amount that has already vested but hasn't been released yet.
-     * @param token ERC20 token which is being vested
+     * @param _beneficiary Beneficiary address
      */
     function releasableAmount(address _beneficiary) public view returns (uint256) {
-        return vestedAmount(token).sub(released[token]);
+        return vestedAmount(_beneficiary).sub(beneficiaries[_beneficiary].released);
     }
 
     /**
      * @dev Calculates the amount that has already vested.
-     * @param token ERC20 token which is being vested
+     * @param _beneficiary Beneficiary address
      */
     function vestedAmount(address _beneficiary) public view returns (uint256) {
-        uint256 currentBalance = token.balanceOf(this);
-        uint256 totalBalance = currentBalance.add(released[token]);
+        Beneficiary storage beneficiary = beneficiaries[_beneficiary];
+        uint256 totalBalance = beneficiary.vested;
 
-        if (now < cliff) {
+        if (now < beneficiary.cliff) {
             return 0;
-        } else if (now >= start.add(duration) || revoked[token]) {
+        } else if (now >= beneficiary.start.add(beneficiary.duration) || beneficiary.revoked) {
             return totalBalance;
         } else {
-            return totalBalance.mul(now.sub(start)).div(duration);
+            return totalBalance.mul(now.sub(beneficiary.start)).div(beneficiary.duration);
         }
     }
 
