@@ -77,7 +77,6 @@ contract MultiVesting is Ownable {
      */
     function release(address _beneficiary) private
     isBeneficiary(_beneficiary)
-    wasNotRevoked(_beneficiary)
     {
         Beneficiary storage beneficiary = beneficiaries[_beneficiary];
 
@@ -87,7 +86,7 @@ contract MultiVesting is Ownable {
 
         beneficiary.released = beneficiary.released.add(unreleased);
 
-        totalReleased.add(unreleased);
+        totalReleased = totalReleased.add(unreleased);
 
         token.transfer(_beneficiary, unreleased);
 
@@ -141,14 +140,19 @@ contract MultiVesting is Ownable {
         require(beneficiary.revocable);
         require(!beneficiary.revoked);
 
-        uint256 balance = token.balanceOf(this);
+        uint256 balance = beneficiary.vested.sub(beneficiary.released);
 
         uint256 unreleased = releasableAmount(_beneficiary);
         uint256 refund = balance.sub(unreleased);
 
-        beneficiary.revoked = true;
+
 
         token.transfer(owner, refund);
+
+        totalReleased = totalReleased.add(refund);
+
+        beneficiary.revoked = true;
+        beneficiary.released = beneficiary.released.add(refund);
 
         Revoked(_beneficiary);
     }
@@ -172,7 +176,7 @@ contract MultiVesting is Ownable {
         if (now < beneficiary.cliff) {
             return 0;
         } else if (now >= beneficiary.start.add(beneficiary.duration) || beneficiary.revoked) {
-            return totalBalance;
+            return beneficiary.vested.sub(beneficiary.released);
         } else {
             return totalBalance.mul(now.sub(beneficiary.start)).div(beneficiary.duration);
         }
