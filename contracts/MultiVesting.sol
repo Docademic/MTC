@@ -111,7 +111,7 @@ contract MultiVesting is Ownable {
      */
     function addBeneficiary(address _beneficiary, uint256 _vested, uint256 _start, uint256 _cliff, uint256 _duration, bool _revocable)
     onlyOwner
-    isNotBeneficiary
+    isNotBeneficiary(_beneficiary)
     public {
         require(_beneficiary != address(0));
         require(_cliff <= _duration);
@@ -145,8 +145,6 @@ contract MultiVesting is Ownable {
         uint256 unreleased = releasableAmount(_beneficiary);
         uint256 refund = balance.sub(unreleased);
 
-
-
         token.transfer(owner, refund);
 
         totalReleased = totalReleased.add(refund);
@@ -176,10 +174,24 @@ contract MultiVesting is Ownable {
         if (now < beneficiary.cliff) {
             return 0;
         } else if (now >= beneficiary.start.add(beneficiary.duration) || beneficiary.revoked) {
-            return beneficiary.vested.sub(beneficiary.released);
+            return totalBalance;
         } else {
             return totalBalance.mul(now.sub(beneficiary.start)).div(beneficiary.duration);
         }
     }
 
+    /**
+     * @notice Allows the owner to flush the eth.
+     */
+    function flushEth() public onlyOwner {
+        owner.transfer(this.balance);
+    }
+
+    /**
+     * @notice Allows the owner to destroy the contract and return the tokens to the owner.
+     */
+    function destroy() public onlyOwner {
+        token.transfer(owner, token.balanceOf(this));
+        selfdestruct(owner);
+    }
 }
