@@ -73,6 +73,13 @@ contract MultiVesting is Ownable, Destroyable {
     }
 
     /**
+     * @notice Transfers vested tokens to beneficiary (alternative to fallback function).
+     */
+    function release() public {
+        release(msg.sender);
+    }
+
+    /**
      * @notice Transfers vested tokens to beneficiary.
      * @param _beneficiary Beneficiary address
      */
@@ -116,7 +123,7 @@ contract MultiVesting is Ownable, Destroyable {
     public {
         require(_beneficiary != address(0));
         require(_cliff <= _duration);
-        require(token.balanceOf(this) > totalVested.sub(totalReleased).add(_vested));
+        require(token.balanceOf(this) >= totalVested.sub(totalReleased).add(_vested));
         beneficiaries[_beneficiary] = Beneficiary({
             released : 0,
             vested : _vested,
