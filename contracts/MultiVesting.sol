@@ -122,7 +122,7 @@ contract MultiVesting is Ownable, Destroyable {
     isNotBeneficiary(_beneficiary)
     public {
         require(_beneficiary != address(0));
-        require(_cliff <= _duration);
+        require(_cliff >= _start);
         require(token.balanceOf(this) >= totalVested.sub(totalReleased).add(_vested));
         beneficiaries[_beneficiary] = Beneficiary({
             released : 0,
