@@ -98,6 +98,10 @@ contract MultiVesting is Ownable, Destroyable {
 
         token.transfer(_beneficiary, unreleased);
 
+        if((beneficiary.vested - beneficiary.released) == 0){
+            beneficiary.isBeneficiary = false;
+        }
+
         Released(_beneficiary, unreleased);
     }
 
