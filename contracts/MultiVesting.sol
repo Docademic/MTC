@@ -28,6 +28,7 @@ contract MultiVesting is Ownable, Destroyable {
     event Released(address _beneficiary, uint256 amount);
     event Revoked(address _beneficiary);
     event NewBeneficiary(address _beneficiary);
+    event BeneficiaryDestroyed(address _beneficiary);
 
 
     mapping(address => Beneficiary) public beneficiaries;
@@ -165,6 +166,25 @@ contract MultiVesting is Ownable, Destroyable {
         beneficiary.released = beneficiary.released.add(refund);
 
         Revoked(_beneficiary);
+    }
+
+    /**
+     * @notice Allows the owner to destroy a beneficiary. Remain tokens are returned to the owner.
+     * @param _beneficiary Beneficiary address
+     */
+    function destroyBeneficiary(address _beneficiary) public onlyOwner {
+        Beneficiary storage beneficiary = beneficiaries[_beneficiary];
+
+        uint256 balance = beneficiary.vested.sub(beneficiary.released);
+
+        token.transfer(owner, balance);
+
+        totalReleased = totalReleased.add(balance);
+
+        beneficiary.isBeneficiary = false;
+        beneficiary.released = beneficiary.released.add(balance);
+
+        BeneficiaryDestroyed(_beneficiary);
     }
 
     /**
