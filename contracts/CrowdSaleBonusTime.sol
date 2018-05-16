@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
 interface token {
-    function transferFrom(address _from, address _to, uint256 _value) public;
+    function transferFrom(address _from, address _to, uint256 _value) external;
 }
 
 contract CrowdSale {
@@ -30,7 +30,7 @@ contract CrowdSale {
      *
      * Setup the owner
      */
-    function CrowdSale(
+    constructor(
         address ifSuccessfulSendTo,
         address addressOfTokenUsedAsReward,
         uint tokensPerEth,
@@ -68,7 +68,7 @@ contract CrowdSale {
         amountRaised += amount;
         tokenReward.transferFrom(beneficiary, msg.sender, tokens);
         checkGoalReached();
-        FundTransfer(msg.sender, amount, true);
+        emit FundTransfer(msg.sender, amount, true);
     }
 
     /**
@@ -148,7 +148,7 @@ contract CrowdSale {
     function checkGoalReached() internal {
         if (amountRaised >= fundingGoal && !fundingGoalReached) {
             fundingGoalReached = true;
-            GoalReached(beneficiary, amountRaised);
+            emit GoalReached(beneficiary, amountRaised);
         }
     }
 
@@ -160,7 +160,7 @@ contract CrowdSale {
     isOwner
     public {
         crowdsaleClosed = true;
-        CrowdsaleClose(amountRaised, fundingGoalReached);
+        emit CrowdsaleClose(amountRaised, fundingGoalReached);
     }
 
     /**
@@ -189,7 +189,7 @@ contract CrowdSale {
             balanceOf[msg.sender] = 0;
             if (amount > 0) {
                 if (msg.sender.send(amount)) {
-                    FundTransfer(msg.sender, amount, false);
+                    emit FundTransfer(msg.sender, amount, false);
                 } else {
                     balanceOf[msg.sender] = amount;
                 }
@@ -198,7 +198,7 @@ contract CrowdSale {
 
         if (fundingGoalReached && beneficiary == msg.sender) {
             if (beneficiary.send(amountRaised)) {
-                FundTransfer(beneficiary, amountRaised, false);
+                emit FundTransfer(beneficiary, amountRaised, false);
             } else {
                 //If we fail to send the funds to beneficiary, unlock funders balance
                 fundingGoalReached = false;

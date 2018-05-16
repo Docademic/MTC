@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
 interface token {
-    function transfer(address _to, uint256 _value) public;
+    function transfer(address _to, uint256 _value) external;
 }
 /// @title Multisignature wallet - Allows multiple parties to agree on transactions before execution.
 contract MultiSigWallet {
@@ -103,7 +103,7 @@ contract MultiSigWallet {
     payable public
     {
         if (msg.value > 0)
-            Deposit(msg.sender, msg.value);
+            emit Deposit(msg.sender, msg.value);
     }
     /*
      * Public functions
@@ -111,7 +111,7 @@ contract MultiSigWallet {
     /// @dev Contract constructor sets initial owners and required number of confirmations.
     /// @param _owners List of initial owners.
     /// @param _required Number of required confirmations.
-    function MultiSigWallet(address[] _owners, uint _required, uint _ethDailyLimit, uint _mtcDailyLimit)
+    constructor(address[] _owners, uint _required, uint _ethDailyLimit, uint _mtcDailyLimit)
     public
     validRequirement(_owners.length, _required)
     {
@@ -142,7 +142,7 @@ contract MultiSigWallet {
     {
         isOwner[owner] = true;
         owners.push(owner);
-        OwnerAddition(owner);
+        emit OwnerAddition(owner);
     }
     /// @dev Allows to remove an owner. Transaction has to be sent by wallet.
     /// @param owner Address of owner.
@@ -160,7 +160,7 @@ contract MultiSigWallet {
         owners.length -= 1;
         if (required > owners.length)
             changeRequirement(owners.length);
-        OwnerRemoval(owner);
+        emit OwnerRemoval(owner);
     }
     /// @dev Allows to replace an owner with a new owner. Transaction has to be sent by wallet.
     /// @param owner Address of owner to be replaced.
@@ -178,8 +178,8 @@ contract MultiSigWallet {
             }
         isOwner[owner] = false;
         isOwner[newOwner] = true;
-        OwnerRemoval(owner);
-        OwnerAddition(newOwner);
+        emit OwnerRemoval(owner);
+        emit OwnerAddition(newOwner);
     }
     /// @dev Allows to change the number of required confirmations. Transaction has to be sent by wallet.
     /// @param _required Number of required confirmations.
@@ -189,7 +189,7 @@ contract MultiSigWallet {
     validRequirement(owners.length, _required)
     {
         required = _required;
-        RequirementChange(_required);
+        emit RequirementChange(_required);
     }
 
     /// @dev Allows to change the eth daily transfer limit. Transaction has to be sent by wallet.
@@ -200,7 +200,7 @@ contract MultiSigWallet {
     validDailyEthLimit(_limit)
     {
         ethDailyLimit = _limit;
-        EthDailyLimitChange(_limit);
+        emit EthDailyLimitChange(_limit);
     }
 
     /// @dev Allows to change the mtc daily transfer limit. Transaction has to be sent by wallet.
@@ -211,7 +211,7 @@ contract MultiSigWallet {
     validDailyMTCLimit(_limit)
     {
         mtcDailyLimit = _limit;
-        MtcDailyLimitChange(_limit);
+        emit MtcDailyLimitChange(_limit);
     }
 
     /// @dev Allows to change the token address. Transaction has to be sent by wallet.
@@ -221,7 +221,7 @@ contract MultiSigWallet {
     onlyWallet
     {
         MTC = token(_token);
-        TokenChange(_token);
+        emit TokenChange(_token);
     }
 
     /// @dev Allows an owner to submit and confirm a transaction.
@@ -246,7 +246,7 @@ contract MultiSigWallet {
     notConfirmed(transactionId, msg.sender)
     {
         confirmations[transactionId][msg.sender] = true;
-        Confirmation(msg.sender, transactionId);
+        emit Confirmation(msg.sender, transactionId);
         executeTransaction(transactionId);
     }
     /// @dev Allows an owner to revoke a confirmation for a transaction.
@@ -258,7 +258,7 @@ contract MultiSigWallet {
     notExecuted(transactionId)
     {
         confirmations[transactionId][msg.sender] = false;
-        Revocation(msg.sender, transactionId);
+        emit Revocation(msg.sender, transactionId);
     }
     /// @dev Allows anyone to execute a confirmed transaction.
     /// @param _to Destination address.
@@ -312,9 +312,9 @@ contract MultiSigWallet {
             Transaction storage txn = transactions[transactionId];
             txn.executed = true;
             if (txn.destination.call.value(txn.value)(txn.data))
-                Execution(transactionId);
+                emit Execution(transactionId);
             else {
-                ExecutionFailure(transactionId);
+                emit ExecutionFailure(transactionId);
                 txn.executed = false;
             }
         }
@@ -358,7 +358,7 @@ contract MultiSigWallet {
             executed : false
             });
         transactionCount += 1;
-        Submission(transactionId);
+        emit Submission(transactionId);
     }
     /*
      * Web3 call functions

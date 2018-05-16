@@ -14,7 +14,7 @@ contract MTC is StandardToken, Ownable {
   uint8 public decimals;
   address public wallet;
 
-  function MTC(string _name, string _symbol, uint256 _totalSupply, uint8 _decimals, address _multiSig) public {
+  constructor(string _name, string _symbol, uint256 _totalSupply, uint8 _decimals, address _multiSig) public {
     require(_multiSig != address(0));
     require(_multiSig != msg.sender);
     require(_totalSupply > 0);
@@ -39,7 +39,7 @@ contract MTC is StandardToken, Ownable {
      balances[_wallet] = balances[_wallet].add(_amount);
 
      /** notificamos la operación */
-     WalletFunded(_wallet, _amount);
-     Transfer(address(0), _wallet, _amount);
+     emit WalletFunded(_wallet, _amount);
+     emit Transfer(address(0), _wallet, _amount);
  }
 }

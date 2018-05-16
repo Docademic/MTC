@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
 interface token {
-    function transferFrom(address _from, address _to, uint256 _value) public;
+    function transferFrom(address _from, address _to, uint256 _value) external;
 }
 
 contract RetailSale {
@@ -27,7 +27,7 @@ contract RetailSale {
      *
      * Setup the owner
      */
-    function RetailSale(
+    constructor(
         address _beneficiary,
         address addressOfTokenUsedAsReward,
         uint ethPriceInWei,
@@ -64,7 +64,7 @@ contract RetailSale {
         if (now >= bonusStart && now <= bonusEnd) {
             b = bonus;
         }
-        if (this.balance >= milestone && !milestoneReached) {
+        if (address(this).balance >= milestone && !milestoneReached) {
             b = milestoneBonus;
             milestoneReached = true;
         }
@@ -74,7 +74,7 @@ contract RetailSale {
             tokens = (vp + ((vp * b) / 100));
         }
         tokenReward.transferFrom(beneficiary, msg.sender, tokens);
-        FundTransfer(msg.sender, msg.value, b, tokens);
+        emit FundTransfer(msg.sender, msg.value, b, tokens);
     }
 
     modifier aboveMinValue() {
@@ -178,7 +178,7 @@ contract RetailSale {
     isOwner
     public {
 
-        beneficiary.transfer(this.balance);
+        beneficiary.transfer(address(this).balance);
 
     }
 

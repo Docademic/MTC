@@ -1,12 +1,12 @@
 pragma solidity ^0.4.18;
 
 interface Crowdsale {
-    function safeWithdrawal() public;
-    function shiftSalePurchase() payable public returns(bool success);
+    function safeWithdrawal() external;
+    function shiftSalePurchase() payable external returns(bool success);
 }
 
 interface Token {
-    function transfer(address _to, uint256 _value) public;
+    function transfer(address _to, uint256 _value) external;
 }
 
 contract ShiftSale {
@@ -33,7 +33,7 @@ contract ShiftSale {
     /// @param _token Address of the Token contract.
     /// @param _owners An array containing the owner addresses.
     /// @param _fee The Shapeshift transaction fee to cover gas expenses.
-    function ShiftSale(
+    constructor(
         address _crowdSale,
         address _token,
         address[] _owners,
@@ -91,7 +91,7 @@ contract ShiftSale {
     {
         if(crowdSale.shiftSalePurchase.value(amount)()){
             raised -= amount;
-            FundTransfer(amount);
+            emit FundTransfer(amount);
         }
     }
 
@@ -101,7 +101,7 @@ contract ShiftSale {
     {
         if(crowdSale.shiftSalePurchase.value(raised)()){
             raised = 0;
-            FundTransfer(raised);
+            emit FundTransfer(raised);
         }
     }
 
@@ -171,7 +171,7 @@ contract ShiftSale {
     function empty()
     ownerExists(msg.sender)
     public {
-        msg.sender.transfer(this.balance);
+        msg.sender.transfer(address(this).balance);
     }
 
 }
