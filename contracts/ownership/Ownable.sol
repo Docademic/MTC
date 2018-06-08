@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
 /**
  * Changes by https://www.docademic.com/
  */
