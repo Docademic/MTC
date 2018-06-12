@@ -14,7 +14,7 @@ contract Airdrop is Ownable, Destroyable {
     using SafeMath for uint256;
 
     /*
-     *   Structs
+     *   Structures
      */
     // Holder of tokens
     struct Beneficiary {
@@ -26,10 +26,9 @@ contract Airdrop is Ownable, Destroyable {
     /*
      *  State
      */
-    //todo: Add token distribution behavior (control, limit, etc...)
     bool public filled;
     bool public airdropped;
-    uint256 public tokensRequired;
+    uint256 public airdropLimit;
     Token public token;
     mapping(address => Beneficiary) public beneficiaries;
     address[] public addresses;
@@ -39,9 +38,10 @@ contract Airdrop is Ownable, Destroyable {
      *  Events
      */
     event NewBeneficiary(address _beneficiary);
-    event SnapshotTaken(uint256 _totalBalance, uint256 _totalAirdrop, uint256 _numberOfBeneficiaries, uint256 _numberOfAirdrops);
+    event SnapshotTaken(uint256 _totalBalance, uint256 _numberOfBeneficiaries, uint256 _numberOfAirdrops);
     event Airdropped(uint256 _totalAirdrop, uint256 _numberOfAirdrops);
     event TokenChanged(address _prevToken, address _token);
+    event AirdropLimitChanged(uint256 _prevLimit, uint256 _airdropLimit);
     event Cleaned(uint256 _numberOfBeneficiaries);
 
     /*
@@ -79,10 +79,12 @@ contract Airdrop is Ownable, Destroyable {
     /**
      * @dev Constructor.
      * @param _token The token address
+     * @param _airdropLimit The token limit by airdrop in wei
      */
-    constructor(address _token) public{
+    constructor(address _token, uint256 _airdropLimit) public{
         require(_token != address(0));
         token = Token(_token);
+        airdropLimit = _airdropLimit;
     }
 
     /**
@@ -133,25 +135,24 @@ contract Airdrop is Ownable, Destroyable {
     isNotFilled
     wasNotAirdropped {
         uint256 totalBalance = 0;
-        uint256 totalAirdrop = 0;
         uint256 airdrops = 0;
         for (uint i = 0; i < addresses.length; i++) {
             uint256 balance = token.balanceOf(addresses[i]);
-            //todo: make airdrop calculation
-            uint256 airdrop = 0;
             Beneficiary storage beneficiary = beneficiaries[addresses[i]];
-            beneficiary.isBeneficiary = false;
             beneficiary.balance = balance;
-            beneficiary.airdrop = airdrop;
             totalBalance = totalBalance.add(balance);
-            if (airdrop > 0) {
-                totalAirdrop = totalAirdrop.add(airdrop);
-                airdrops = airdrops.add(1);
+        }
+        if (totalBalance > 0) {
+            for (uint j = 0; j < addresses.length; j++) {
+                Beneficiary storage beneficiaryb = beneficiaries[addresses[i]];
+                if (beneficiaryb.balance > 0) {
+                    beneficiaryb.airdrop = (beneficiaryb.balance.mul(airdropLimit).div(totalBalance));
+                    airdrops = airdrops.add(1);
+                }
             }
         }
-        tokensRequired = totalAirdrop;
         filled = true;
-        emit SnapshotTaken(totalBalance, totalAirdrop, addresses.length, airdrops);
+        emit SnapshotTaken(totalBalance, addresses.length, airdrops);
     }
 
     /**
@@ -172,7 +173,6 @@ contract Airdrop is Ownable, Destroyable {
                 airdrops = airdrops.add(1);
             }
         }
-        tokensRequired = tokensRequired.sub(totalAirdrop);
         airdropped = true;
         emit Airdropped(totalAirdrop, airdrops);
     }
@@ -209,7 +209,16 @@ contract Airdrop is Ownable, Destroyable {
     onlyOwner {
         emit TokenChanged(address(token), _token);
         token = Token(_token);
+    }
 
+    /**
+     * @dev Allows the owner to change the token limit by airdrop.
+     * @param _airdropLimit The token limit by airdrop in wei.
+     */
+    function changeAirdropLimit(uint256 _airdropLimit) public
+    onlyOwner {
+        emit AirdropLimitChanged(airdropLimit, _airdropLimit);
+        airdropLimit = _airdropLimit;
     }
 
     /**
@@ -218,6 +227,7 @@ contract Airdrop is Ownable, Destroyable {
     function flushEth() public onlyOwner {
         owner.transfer(address(this).balance);
     }
+
     /**
      * @dev Allows the owner to flush the eth.
      */
