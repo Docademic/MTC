@@ -112,6 +112,17 @@ contract Airdrop is Ownable, Destroyable {
     }
 
     /**
+     * @dev Allows the owner to register beneficiaries for the airdrop.
+     * @param _beneficiaries The array of addresses
+     */
+    function registerBeneficiaries(address[] _beneficiaries) public
+    onlyOwner {
+        for (uint i = 0; i < _beneficiaries.length; i++) {
+            addBeneficiary(_beneficiaries[i]);
+        }
+    }
+
+    /**
      * @dev Add a beneficiary for the airdrop.
      * @param _beneficiary The address of the beneficiary
      */
