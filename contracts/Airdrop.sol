@@ -202,6 +202,24 @@ contract Airdrop is Ownable, Destroyable {
     }
 
     /**
+     * @dev Get the token balance of the beneficiary.
+     * @param _beneficiary The address of the beneficiary
+     * @return _balance The token balance of the beneficiary
+     */
+    function getBalanceAtSnapshot(address _beneficiary) view public returns (uint256 _balance) {
+        return beneficiaries[_beneficiary].balance / 1 ether;
+    }
+
+    /**
+     * @dev Get the airdrop reward of the beneficiary.
+     * @param _beneficiary The address of the beneficiary
+     * @return _airdrop The token balance of the beneficiary
+     */
+    function getAirdropAtSnapshot(address _beneficiary) view public returns (uint256 _airdrop) {
+        return beneficiaries[_beneficiary].airdrop / 1 ether;
+    }
+
+    /**
      * @dev Allows the owner to change the token address.
      * @param _token New token address.
      */
