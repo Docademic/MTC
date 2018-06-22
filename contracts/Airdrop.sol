@@ -29,20 +29,25 @@ contract Airdrop is Ownable, Destroyable {
     bool public filled;
     bool public airdropped;
     uint256 public airdropLimit;
+    uint256 public currentCirculating;
+    uint256 public burn;
+    address public hell;
+    address[] public addresses;
     Token public token;
     mapping(address => Beneficiary) public beneficiaries;
-    address[] public addresses;
 
 
     /*
      *  Events
      */
     event NewBeneficiary(address _beneficiary);
-    event SnapshotTaken(uint256 _totalBalance, uint256 _numberOfBeneficiaries, uint256 _numberOfAirdrops);
+    event SnapshotTaken(uint256 _totalBalance, uint256 _totalAirdrop, uint256 _toBurn,uint256 _numberOfBeneficiaries, uint256 _numberOfAirdrops);
     event Airdropped(uint256 _totalAirdrop, uint256 _numberOfAirdrops);
     event TokenChanged(address _prevToken, address _token);
     event AirdropLimitChanged(uint256 _prevLimit, uint256 _airdropLimit);
+    event CurrentCirculatingChanged(uint256 _prevCirculating, uint256 _currentCirculating);
     event Cleaned(uint256 _numberOfBeneficiaries);
+    event Burned(uint256 _tokensBurned);
 
     /*
      *  Modifiers
@@ -80,11 +85,15 @@ contract Airdrop is Ownable, Destroyable {
      * @dev Constructor.
      * @param _token The token address
      * @param _airdropLimit The token limit by airdrop in wei
+     * @param _currentCirculating The current circulating tokens in wei
+     * @param _hell The address where tokens wil be burned
      */
-    constructor(address _token, uint256 _airdropLimit) public{
+    constructor(address _token, uint256 _airdropLimit, uint256 _currentCirculating, address _hell) public{
         require(_token != address(0));
         token = Token(_token);
         airdropLimit = _airdropLimit;
+        currentCirculating = _currentCirculating;
+        hell = _hell;
     }
 
     /**
@@ -146,30 +155,27 @@ contract Airdrop is Ownable, Destroyable {
     isNotFilled
     wasNotAirdropped {
         uint256 totalBalance = 0;
+        uint256 totalAirdrop = 0;
         uint256 airdrops = 0;
         for (uint i = 0; i < addresses.length; i++) {
-            uint256 balance = token.balanceOf(addresses[i]);
             Beneficiary storage beneficiary = beneficiaries[addresses[i]];
-            beneficiary.balance = balance;
-            totalBalance = totalBalance.add(balance);
-        }
-        if (totalBalance > 0) {
-            for (uint j = 0; j < addresses.length; j++) {
-                Beneficiary storage beneficiaryb = beneficiaries[addresses[i]];
-                if (beneficiaryb.balance > 0) {
-                    beneficiaryb.airdrop = (beneficiaryb.balance.mul(airdropLimit).div(totalBalance));
-                    airdrops = airdrops.add(1);
-                }
+            beneficiary.balance = token.balanceOf(addresses[i]);
+            totalBalance = totalBalance.add(beneficiary.balance);
+            if (beneficiary.balance > 0) {
+                beneficiary.airdrop = (beneficiary.balance.mul(airdropLimit).div(currentCirculating));
+                totalAirdrop = totalAirdrop.add(beneficiary.airdrop);
+                airdrops = airdrops.add(1);
             }
         }
         filled = true;
-        emit SnapshotTaken(totalBalance, addresses.length, airdrops);
+        burn = airdropLimit.sub(totalAirdrop);
+        emit SnapshotTaken(totalBalance, totalAirdrop, burn, addresses.length, airdrops);
     }
 
     /**
      * @dev Start the airdrop.
      */
-    function airdrop() public
+    function airdropAndBurn() public
     onlyOwner
     isFilled
     wasNotAirdropped {
@@ -185,7 +191,11 @@ contract Airdrop is Ownable, Destroyable {
             }
         }
         airdropped = true;
+        currentCirculating = currentCirculating.add(totalAirdrop);
         emit Airdropped(totalAirdrop, airdrops);
+        emit Burned(burn);
+        token.transfer(hell, burn);
+
     }
 
     /**
@@ -201,33 +211,8 @@ contract Airdrop is Ownable, Destroyable {
         }
         filled = false;
         airdropped = false;
+        burn = 0;
         emit Cleaned(addresses.length);
-    }
-
-    /**
-     * @dev Get the remain MTC on the contract.
-     * @return _balance The token balance of this contract
-     */
-    function Balance() view public returns (uint256 _balance) {
-        return token.balanceOf(address(this));
-    }
-
-    /**
-     * @dev Get the token balance of the beneficiary.
-     * @param _beneficiary The address of the beneficiary
-     * @return _balance The token balance of the beneficiary
-     */
-    function getBalanceAtSnapshot(address _beneficiary) view public returns (uint256 _balance) {
-        return beneficiaries[_beneficiary].balance / 1 ether;
-    }
-
-    /**
-     * @dev Get the airdrop reward of the beneficiary.
-     * @param _beneficiary The address of the beneficiary
-     * @return _airdrop The token balance of the beneficiary
-     */
-    function getAirdropAtSnapshot(address _beneficiary) view public returns (uint256 _airdrop) {
-        return beneficiaries[_beneficiary].airdrop / 1 ether;
     }
 
     /**
@@ -251,6 +236,16 @@ contract Airdrop is Ownable, Destroyable {
     }
 
     /**
+     * @dev Allows the owner to change the token limit by airdrop.
+     * @param _currentCirculating The current circulating tokens in wei.
+     */
+    function changeCurrentCirculating(uint256 _currentCirculating) public
+    onlyOwner {
+        emit CurrentCirculatingChanged(currentCirculating, _currentCirculating);
+        currentCirculating = _currentCirculating;
+    }
+
+    /**
      * @dev Allows the owner to flush the eth.
      */
     function flushEth() public onlyOwner {
@@ -258,7 +253,7 @@ contract Airdrop is Ownable, Destroyable {
     }
 
     /**
-     * @dev Allows the owner to flush the eth.
+     * @dev Allows the owner to flush the tokens of the contract.
      */
     function flushTokens() public onlyOwner {
         token.transfer(owner, token.balanceOf(address(this)));
@@ -270,5 +265,48 @@ contract Airdrop is Ownable, Destroyable {
     function destroy() public onlyOwner {
         token.transfer(owner, token.balanceOf(address(this)));
         selfdestruct(owner);
+    }
+
+    /**
+     * @dev Get the token balance of the contract.
+     * @return _balance The token balance of this contract
+     */
+    function tokenBalance() view public returns (uint256 _balance) {
+        return token.balanceOf(address(this));
+    }
+
+    /**
+     * @dev Get the token balance of the beneficiary.
+     * @param _beneficiary The address of the beneficiary
+     * @return _balance The token balance of the beneficiary
+     */
+    function getBalanceAtSnapshot(address _beneficiary) view public returns (uint256 _balance) {
+        return beneficiaries[_beneficiary].balance / 1 ether;
+    }
+
+    /**
+     * @dev Get the airdrop reward of the beneficiary.
+     * @param _beneficiary The address of the beneficiary
+     * @return _airdrop The token balance of the beneficiary
+     */
+    function getAirdropAtSnapshot(address _beneficiary) view public returns (uint256 _airdrop) {
+        return beneficiaries[_beneficiary].airdrop / 1 ether;
+    }
+
+    /**
+     * @dev Allows a beneficiary to verify if he is already registered.
+     * @param _beneficiary The address of the beneficiary
+     * @return _isBeneficiary The boolean value
+     */
+    function amIBeneficiary(address _beneficiary) view public returns (bool _isBeneficiary) {
+        return beneficiaries[_beneficiary].isBeneficiary;
+    }
+
+    /**
+     * @dev Get the number of beneficiaries.
+     * @return _length The number of beneficiaries
+     */
+    function beneficiariesLength() view public returns (uint256 _length) {
+        return addresses.length;
     }
 }
