@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.21;
 
 import "./ownership/Ownable.sol";
 import "./math/SafeMath.sol";
@@ -30,8 +30,8 @@ contract Airdrop is Ownable, Destroyable {
     bool public airdropped;
     uint256 public airdropLimit;
     uint256 public currentCirculating;
-    uint256 public burn;
-    address public hell;
+    uint256 public toVault;
+    address public vault;
     address[] public addresses;
     Token public token;
     mapping(address => Beneficiary) public beneficiaries;
@@ -44,10 +44,11 @@ contract Airdrop is Ownable, Destroyable {
     event SnapshotTaken(uint256 _totalBalance, uint256 _totalAirdrop, uint256 _toBurn,uint256 _numberOfBeneficiaries, uint256 _numberOfAirdrops);
     event Airdropped(uint256 _totalAirdrop, uint256 _numberOfAirdrops);
     event TokenChanged(address _prevToken, address _token);
+    event VaultChanged(address _prevVault, address _vault);
     event AirdropLimitChanged(uint256 _prevLimit, uint256 _airdropLimit);
     event CurrentCirculatingChanged(uint256 _prevCirculating, uint256 _currentCirculating);
     event Cleaned(uint256 _numberOfBeneficiaries);
-    event Burned(uint256 _tokensBurned);
+    event Vaulted(uint256 _tokensBurned);
 
     /*
      *  Modifiers
@@ -86,14 +87,14 @@ contract Airdrop is Ownable, Destroyable {
      * @param _token The token address
      * @param _airdropLimit The token limit by airdrop in wei
      * @param _currentCirculating The current circulating tokens in wei
-     * @param _hell The address where tokens wil be burned
+     * @param _vault The address where tokens will be vaulted
      */
-    constructor(address _token, uint256 _airdropLimit, uint256 _currentCirculating, address _hell) public{
+    constructor(address _token, uint256 _airdropLimit, uint256 _currentCirculating, address _vault) public{
         require(_token != address(0));
         token = Token(_token);
         airdropLimit = _airdropLimit;
         currentCirculating = _currentCirculating;
-        hell = _hell;
+        vault = _vault;
     }
 
     /**
@@ -168,14 +169,14 @@ contract Airdrop is Ownable, Destroyable {
             }
         }
         filled = true;
-        burn = airdropLimit.sub(totalAirdrop);
-        emit SnapshotTaken(totalBalance, totalAirdrop, burn, addresses.length, airdrops);
+        toVault = airdropLimit.sub(totalAirdrop);
+        emit SnapshotTaken(totalBalance, totalAirdrop, toVault, addresses.length, airdrops);
     }
 
     /**
      * @dev Start the airdrop.
      */
-    function airdropAndBurn() public
+    function airdropAndVault() public
     onlyOwner
     isFilled
     wasNotAirdropped {
@@ -191,11 +192,11 @@ contract Airdrop is Ownable, Destroyable {
             }
         }
         airdropped = true;
-        currentCirculating = currentCirculating.add(totalAirdrop);
+        currentCirculating = currentCirculating.add(airdropLimit);
         emit Airdropped(totalAirdrop, airdrops);
-        emit Burned(burn);
-        token.transfer(hell, burn);
 
+        token.transfer(vault, toVault);
+        emit Vaulted(toVault);
     }
 
     /**
@@ -211,7 +212,7 @@ contract Airdrop is Ownable, Destroyable {
         }
         filled = false;
         airdropped = false;
-        burn = 0;
+        toVault = 0;
         emit Cleaned(addresses.length);
     }
 
@@ -223,6 +224,16 @@ contract Airdrop is Ownable, Destroyable {
     onlyOwner {
         emit TokenChanged(address(token), _token);
         token = Token(_token);
+    }
+
+    /**
+     * @dev Allows the owner to change the vault address.
+     * @param _vault New vault address.
+     */
+    function changeVault(address _vault) public
+    onlyOwner {
+        emit VaultChanged(vault, _vault);
+        vault = _vault;
     }
 
     /**
