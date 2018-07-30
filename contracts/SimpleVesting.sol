@@ -2,7 +2,6 @@ pragma solidity ^0.4.21;
 
 import "./util/DestroyableMultiOwner.sol";
 import "./math/SafeMath.sol";
-import "./util/Destroyable.sol";
 
 interface Token {
 	function transfer(address _to, uint256 _value) external;
@@ -10,7 +9,7 @@ interface Token {
 	function balanceOf(address who) view external returns (uint256);
 }
 
-contract SimpleVesting is DestroyableMultiOwner{
+contract SimpleVesting is DestroyableMultiOwner {
 	using SafeMath for uint256;
 	
 	event Released(address _beneficiary, uint256 _amount);
@@ -24,6 +23,7 @@ contract SimpleVesting is DestroyableMultiOwner{
 		uint256 releaseAt;
 		bool released;
 		bool isBeneficiary;
+		bool exists;
 	}
 	
 	mapping(address => Beneficiary) public beneficiaries;
@@ -57,26 +57,26 @@ contract SimpleVesting is DestroyableMultiOwner{
 	}
 	
 	function() payable public {
-		release(msg.sender);
+		reclaim(msg.sender);
 	}
 	
 	/**
      * @notice Transfers vested tokens to beneficiary (alternative to fallback function).
      */
-	function release() public {
-		release(msg.sender);
+	function reclaim() public {
+		reclaim(msg.sender);
 	}
 	
 	/**
      * @notice Transfers vested tokens to beneficiary.
      * @param _beneficiary Beneficiary address
      */
-	function release(address _beneficiary) private
+	function reclaim(address _beneficiary) private
 	isBeneficiary(_beneficiary)
 	{
 		Beneficiary storage beneficiary = beneficiaries[_beneficiary];
 		
-		require(now>=beneficiary.releaseAt);
+		require(now >= beneficiary.releaseAt || beneficiary.released);
 		
 		uint256 vested = beneficiary.vested;
 		
@@ -95,8 +95,8 @@ contract SimpleVesting is DestroyableMultiOwner{
 	 * @notice Allows the owner to transfers vested tokens to beneficiary.
 	 * @param _beneficiary Beneficiary address
 	 */
-	function releaseTo(address _beneficiary) public onlyOwner {
-		release(_beneficiary);
+	function reclaimFor(address _beneficiary) public onlyOwner {
+		reclaim(_beneficiary);
 	}
 	
 	/**
@@ -112,17 +112,35 @@ contract SimpleVesting is DestroyableMultiOwner{
 	public {
 		require(_beneficiary != address(0));
 		require(token.balanceOf(this) >= actualVested.add(_vested));
-		beneficiaries[_beneficiary] = Beneficiary({
-			description: _description,
-			vested: _vested,
-			releaseAt: _releaseAt,
-			released: false,
-			isBeneficiary: false
-			});
+		Beneficiary storage beneficiary = beneficiaries[_beneficiary];
+		
+		if(!beneficiary.exists){
+			addresses.push(_beneficiary);
+		}
+		
+		beneficiary.description = _description;
+		beneficiary.vested = _vested;
+		beneficiary.releaseAt = _releaseAt;
+		beneficiary.released = false;
+		beneficiary.isBeneficiary = true;
+		beneficiary.exists = true;
+		
 		totalVested = totalVested.add(_vested);
 		actualVested = actualVested.add(_vested);
-		addresses.push(_beneficiary);
+		
 		emit NewBeneficiary(_beneficiary);
+	}
+	
+	/**
+     * @notice Transfers vested tokens to beneficiary.
+     * @param _beneficiary Beneficiary address
+     */
+	function release(address _beneficiary) public
+	onlyOwner
+	isBeneficiary(_beneficiary)
+	{
+		Beneficiary storage beneficiary = beneficiaries[_beneficiary];
+		beneficiary.released = true;
 	}
 	
 	/**
@@ -132,7 +150,7 @@ contract SimpleVesting is DestroyableMultiOwner{
      */
 	function revoke(address _beneficiary) public
 	onlyOwner
-	isNotBeneficiary(_beneficiary){
+	isNotBeneficiary(_beneficiary) {
 		Beneficiary storage beneficiary = beneficiaries[_beneficiary];
 		
 		uint256 vested = beneficiary.vested;
